@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paiements - Rafael Bank</title>
+  <link rel="shortcut icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h2>Virements</h2>
+      <div class="top-actions">
+        <a class="btn-link secondary" href="login.html" onclick="logout()">Se déconnecter</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="small">Solde disponible</p>
+      <h2 id="paymentBalance">0.00 €</h2>
+    </div>
+
+    <div class="row">
+      <input id="paymentName" type="text" placeholder="Nom du bénéficiaire">
+      <input id="iban" type="text" placeholder="IBAN">
+    </div>
+
+    <div class="row">
+      <input id="amount" type="number" min="0" step="0.01" placeholder="Montant">
+      <button onclick="transfer()">Envoyer</button>
+    </div>
+
+    <div class="row">
+      <button onclick="addContact()">Ajouter un contact</button>
+    </div>
+
+    <h3>Contacts</h3>
+    <div id="contactsList"></div>
+  </div>
+
+  <nav>
+    <a href="home.html">Accueil</a>
+    <a href="cards.html">Cartes</a>
+    <a href="payments.html">Paiement</a>
+    <a href="crypto.html">Crypto</a>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

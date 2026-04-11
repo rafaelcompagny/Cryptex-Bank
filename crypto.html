@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto - Rafael Bank</title>
+  <link rel="shortcut icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h2>Portefeuille</h2>
+      <div class="top-actions">
+        <a class="btn-link secondary" href="login.html" onclick="logout()">Se déconnecter</a>
+      </div>
+    </div>
+
+    <p id="portfolio"></p>
+    <p id="cashBalance"></p>
+
+    <select id="assetSelect" onchange="selectAsset(this.value)">
+      <option value="BTC">Bitcoin</option>
+      <option value="ETH">Ethereum</option>
+      <option value="AAPL">Apple</option>
+      <option value="TSLA">Tesla</option>
+      <option value="NVDA">Nvidia</option>
+      <option value="RCOP">Rafael Company</option>
+    </select>
+
+    <canvas id="cryptoChart" height="120"></canvas>
+
+    <p id="price"></p>
+    <p id="holding"></p>
+    <p id="pnl"></p>
+
+    <div class="row">
+      <input id="investAmount" type="number" min="0" step="0.01" placeholder="Montant à investir">
+      <button onclick="buy()">Acheter</button>
+    </div>
+
+    <div class="row">
+      <input id="sellAmount" type="number" min="0" step="0.000001" placeholder="Quantité à vendre">
+      <button onclick="sellPartial()">Vendre une partie</button>
+      <button class="secondary" onclick="sellAll()">Vendre tout</button>
+    </div>
+
+    <h3>Transactions</h3>
+    <div id="cryptoHistory"></div>
+  </div>
+
+  <nav>
+    <a href="home.html">Accueil</a>
+    <a href="cards.html">Cartes</a>
+    <a href="payments.html">Paiement</a>
+    <a href="crypto.html">Crypto</a>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

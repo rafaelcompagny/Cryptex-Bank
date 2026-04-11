@@ -1,0 +1,312 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0b1220;
+  color: white;
+}
+
+.container {
+  padding: 20px;
+  padding-bottom: 110px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.topbar h1,
+.topbar h2,
+.topbar p {
+  margin: 0;
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button,
+.btn-link {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  margin: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+button:hover,
+.btn-link:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+button.secondary,
+.btn-link.secondary {
+  background: #1f2937;
+}
+
+input,
+select {
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  margin: 5px 5px 5px 0;
+  background: #111827;
+  color: white;
+}
+
+input::placeholder {
+  color: #94a3b8;
+}
+
+nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  z-index: 50;
+}
+
+nav a {
+  flex: 1;
+  text-align: center;
+  padding: 15px;
+  background: #020617;
+  color: white;
+  text-decoration: none;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+nav a:hover {
+  background: #0f172a;
+}
+
+.card {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.list-item {
+  background: #111827;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 8px 0;
+}
+
+.positive {
+  color: #22c55e;
+}
+
+.negative {
+  color: #ef4444;
+}
+
+canvas {
+  width: 100% !important;
+  max-width: 100%;
+  display: block;
+  margin: 10px 0 20px;
+  background: transparent;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.small {
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+/* Login */
+.login-wrap {
+  max-width: 420px;
+  padding-top: 40px;
+}
+
+.pin-display {
+  font-size: 28px;
+  letter-spacing: 8px;
+  min-height: 40px;
+}
+
+.pin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.pin-grid button {
+  margin: 0;
+}
+
+/* Carte 3D */
+.card3d {
+  width: 320px;
+  max-width: 100%;
+  height: 190px;
+  perspective: 1000px;
+  margin: 10px 0 20px;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: transform 0.8s ease;
+  transform-style: preserve-3d;
+}
+
+.card-inner.flip {
+  transform: rotateY(180deg);
+}
+
+.card-front,
+.card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 22px;
+  overflow: hidden;
+  padding: 22px;
+  box-sizing: border-box;
+}
+
+.card-front {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.card-back {
+  transform: rotateY(180deg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Choix de cartes */
+.card-front.classic,
+.card-back.classic {
+  background: linear-gradient(135deg, #1468f0, #00409b);
+}
+
+.card-front.premium,
+.card-back.premium {
+  background: linear-gradient(135deg, #deb308d5, #b28200);
+}
+
+.card-front.black,
+.card-back.black {
+  background: linear-gradient(135deg, #111111, #2a2a2a);
+}
+
+.card-chip {
+  width: 48px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fcd34d, #f59e0b);
+  margin-bottom: 20px;
+}
+
+.bank-logo {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.card-number {
+  font-size: 22px;
+  letter-spacing: 2px;
+  margin: 18px 0;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.black-strip {
+  height: 42px;
+  background: #000;
+  margin: 12px -22px 16px;
+}
+
+.cvv-box {
+  background: #e5e7eb;
+  color: #111827;
+  padding: 10px;
+  border-radius: 8px;
+  width: 100px;
+  text-align: right;
+  font-weight: bold;
+  margin-left: auto;
+}
+
+.card-bottom-logos {
+  position: absolute;
+  bottom: 18px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.apple-pay-logo {
+  font-size: 18px;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.visa-logo {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.95;
+}
+
+.card-logo {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-weight: bold;
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.card-logo-img {
+  position: absolute;
+  top: 20px;
+  right: 115px;
+  width: 40px;
+}
+
+
+
+.status-pill {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #111827;
+  margin: 10px 0;
+}

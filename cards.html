@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartes - Rafael Bank</title>
+  <link rel="shortcut icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h2>Ma carte</h2>
+      <div class="top-actions">
+        <a class="btn-link secondary" href="login.html" onclick="logout()">Se déconnecter</a>
+      </div>
+    </div>
+
+    <div class="row">
+      <select id="cardTypeSelect" onchange="changeCardType(this.value)">
+        <option value="classic">Classique</option>
+        <option value="premium">Premium</option>
+        <option value="black">Black</option>
+      </select>
+    </div>
+
+    <div class="status-pill" id="cardStatusText">Carte active</div>
+
+    <div class="card3d">
+      <div id="cardInner" class="card-inner">
+        <div class="card-front" id="cardFront">
+          <div class="card-chip"></div>
+            <!-- LOGO -->
+            <div class="bank-logo">Rafael Bank</div>
+            <img src="img/logo.jpg" class="card-logo-img">
+
+          <div class="card-number" id="maskedCardNumber">**** **** **** 4821</div>
+
+          <div class="card-meta">
+            <span>RAFAEL</span>
+            <span id="maskedExpiry">••/••</span>
+          </div>
+
+          <div class="card-bottom-logos">
+            <div class="apple-pay-logo"> Pay</div>
+            <div class="visa-logo">VISA</div>
+          </div>
+        </div>
+
+        <div class="card-back" id="cardBack">
+          <div class="black-strip"></div>
+          <p class="small">CVV</p>
+          <div class="cvv-box" id="maskedCvv">***</div>
+          <p class="small" style="margin-top:8px;">
+            IBAN : <span id="cardIban">FR76 XXXX XXXX XXXX XXXX XXXX XXX</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <button onclick="showFullCard()">Voir les infos</button>
+      <button class="secondary" onclick="flipCard()">Retourner la carte</button>
+      <button onclick="toggleCardBlock()">Activer / Bloquer</button>
+    </div>
+  </div>
+
+  <nav>
+    <a href="home.html">Accueil</a>
+    <a href="cards.html">Cartes</a>
+    <a href="payments.html">Paiement</a>
+    <a href="crypto.html">Crypto</a>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

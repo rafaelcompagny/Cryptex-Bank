@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion - Rafael Bank</title>
+  <link rel="shortcut icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container login-wrap">
+    <div class="topbar">
+      <h1>Rafael Bank</h1>
+    </div>
+
+    <div class="card">
+      <h2>Connexion</h2>
+
+      <div class="row">
+        <input id="loginUsername" type="text" placeholder="Nom d'utilisateur">
+      </div>
+
+      <p id="pinDots" class="pin-display">• • • •</p>
+
+      <div class="pin-grid">
+        <button onclick="pressPin(1)">1</button>
+        <button onclick="pressPin(2)">2</button>
+        <button onclick="pressPin(3)">3</button>
+        <button onclick="pressPin(4)">4</button>
+        <button onclick="pressPin(5)">5</button>
+        <button onclick="pressPin(6)">6</button>
+        <button onclick="pressPin(7)">7</button>
+        <button onclick="pressPin(8)">8</button>
+        <button onclick="pressPin(9)">9</button>
+        <button class="secondary" onclick="clearPin()">⌫</button>
+        <button onclick="pressPin(0)">0</button>
+        <button class="secondary" onclick="clearPin()">Effacer</button>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button onclick="loginUser()">Se connecter</button>
+        <button class="secondary" onclick="startCreateAccount()">Créer un compte</button>
+      </div>
+
+      <p class="small">Pour créer un compte : entre un nom, puis clique sur “Créer un compte”.</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

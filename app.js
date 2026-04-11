@@ -1,59 +1,75 @@
-let balance = Number(localStorage.getItem('balance') || 2000);
-let history = JSON.parse(localStorage.getItem('history') || '[]');
+const STORAGE_USERS_KEY = 'rb_users';
+const STORAGE_CURRENT_USER_KEY = 'rb_current_user';
+
 let pinValue = '';
-let homeChart = null;
 let cryptoChart = null;
 
-const defaultAssets = {
-  BTC: { price: 30000, owned: 0, avgBuyPrice: 0, history: [30000, 30120, 30050], transactions: [] },
-  ETH: { price: 2000, owned: 0, avgBuyPrice: 0, history: [2000, 2015, 1998], transactions: [] },
-  AAPL: { price: 180, owned: 0, avgBuyPrice: 0, history: [180, 181, 179], transactions: [] },
-  TSLA: { price: 250, owned: 0, avgBuyPrice: 0, history: [250, 248, 252], transactions: [] },
-  NVDA: { price: 500, owned: 0, avgBuyPrice: 0, history: [500, 506, 503], transactions: [] },
-  RCOP: { price: 5000, owned: 0, avgBuyPrice: 0, history: [5000, 5035, 4990], transactions: [] }
-};
+function getUsers() {
+  return JSON.parse(localStorage.getItem(STORAGE_USERS_KEY) || '{}');
+}
 
-let assets = JSON.parse(localStorage.getItem('assets') || '{}');
+function saveUsers(users) {
+  localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+}
 
-let contacts = JSON.parse(localStorage.getItem('contacts') || JSON.stringify([
-  { name: 'Lina Popelin', iban: 'FR76 1111 1111 1111 1111 1111 111' },
-  { name: 'Thibaut Escoffier', iban: 'FR76 2222 2222 2222 2222 2222 222' },
-  { name: 'Aglaé', iban: 'FR76 3333 3333 3333 3333 3333 333' },
-  { name: 'Gabriel Rattela', iban: 'FR76 4444 4444 4444 4444 4444 444' },
-  { name: 'Laura Loreau', iban: 'FR76 5555 5555 5555 5555 5555 555' },
-]));
+function getCurrentUsername() {
+  return localStorage.getItem(STORAGE_CURRENT_USER_KEY);
+}
 
-// Fusion pour ajouter automatiquement les nouveaux actifs manquants
-assets = {
-  ...defaultAssets,
-  ...assets
-};
+function setCurrentUsername(username) {
+  localStorage.setItem(STORAGE_CURRENT_USER_KEY, username);
+}
 
-// Vérifie chaque actif individuellement pour éviter les anciennes sauvegardes incomplètes
-Object.keys(defaultAssets).forEach((key) => {
-  if (!assets[key]) {
-    assets[key] = { ...defaultAssets[key] };
-  } else {
-    assets[key] = {
-      ...defaultAssets[key],
-      ...assets[key]
-    };
+function clearCurrentUsername() {
+  localStorage.removeItem(STORAGE_CURRENT_USER_KEY);
+}
 
-    if (!Array.isArray(assets[key].history) || assets[key].history.length < 2) {
-      assets[key].history = [...defaultAssets[key].history];
+function createDefaultUser(pin) {
+  return {
+    pin,
+    profile: {
+      username: '',
+      createdAt: Date.now()
+    },
+    game: {
+      balance: 0,
+      clickValue: 1,
+      clickLevel: 1,
+      lastDailyBonus: 0,
+      loans: [],
+      activeAccount: 'Principal',
+      accounts: {
+        Principal: 0
+      },
+      history: []
+    },
+    banking: {
+      contacts: [
+        { name: 'Lina Popelin', iban: 'FR76 1111 1111 1111 1111 1111 111' },
+        { name: 'Thibaut Escoffier', iban: 'FR76 2222 2222 2222 2222 2222 222' },
+        { name: 'Aglaé', iban: 'FR76 3333 3333 3333 3333 3333 333' },
+        { name: 'Gabriel Rattela', iban: 'FR76 4444 4444 4444 4444 4444 444' },
+        { name: 'Laura Loreau', iban: 'FR76 5555 5555 5555 5555 5555 555' },
+      ]
+    },
+    crypto: {
+      currentAsset: 'BTC',
+      assets: {
+        BTC: { price: 30000, owned: 0, avgBuyPrice: 0, history: [30000, 30120, 30050], transactions: [] },
+        ETH: { price: 2000, owned: 0, avgBuyPrice: 0, history: [2000, 2015, 1998], transactions: [] },
+        AAPL: { price: 180, owned: 0, avgBuyPrice: 0, history: [180, 181, 179], transactions: [] },
+        TSLA: { price: 250, owned: 0, avgBuyPrice: 0, history: [250, 248, 252], transactions: [] },
+        NVDA: { price: 500, owned: 0, avgBuyPrice: 0, history: [500, 506, 503], transactions: [] },
+        RCOP: { price: 5000, owned: 0, avgBuyPrice: 0, history: [5000, 5035, 4990], transactions: [] }
+      }
+    },
+    card: {
+      blocked: false,
+      revealed: false,
+      type: 'classic'
     }
-
-    if (!Array.isArray(assets[key].transactions)) {
-      assets[key].transactions = [];
-    }
-
-    if (typeof assets[key].owned !== 'number') assets[key].owned = 0;
-    if (typeof assets[key].avgBuyPrice !== 'number') assets[key].avgBuyPrice = 0;
-    if (typeof assets[key].price !== 'number' || assets[key].price <= 0) {
-      assets[key].price = defaultAssets[key].price;
-    }
-  }
-});
+  };
+}
 
 let appState = JSON.parse(localStorage.getItem('appState') || JSON.stringify({
   currentAsset: 'BTC',
@@ -68,14 +84,6 @@ function changeCardType(type) {
   save();
 }
 
-let currentAsset = appState.currentAsset || 'BTC';
-
-// Si l’actif sauvé n’existe pas, on revient sur BTC
-if (!assets[currentAsset]) {
-  currentAsset = 'BTC';
-  appState.currentAsset = 'BTC';
-}
-
 const cardData = {
   numberMasked: '**** **** **** 4821',
   numberFull: '1234 5678 9012 4821',
@@ -83,436 +91,8 @@ const cardData = {
   expiryFull: '12/28',
   cvvMasked: '***',
   cvvFull: '123',
-  iban: 'FR76 0612 0206 0000 0000 0000 001'
+  iban: 'FR76 0612 0000 0000 0000 0000 001'
 };
-
-function save() {
-  appState.currentAsset = currentAsset;
-  localStorage.setItem('balance', balance);
-  localStorage.setItem('history', JSON.stringify(history));
-  localStorage.setItem('assets', JSON.stringify(assets));
-  localStorage.setItem('appState', JSON.stringify(appState));
-  localStorage.setItem('contacts', JSON.stringify(contacts));
-}
-
-function formatMoney(value) {
-  return Number(value).toFixed(2) + ' €';
-}
-
-function getHoldingValue(assetKey) {
-  return assets[assetKey].owned * assets[assetKey].price;
-}
-
-function getPnL(assetKey) {
-  const asset = assets[assetKey];
-  if (asset.owned <= 0 || asset.avgBuyPrice <= 0) return 0;
-  return (asset.price - asset.avgBuyPrice) * asset.owned;
-}
-
-function update() {
-  const balanceEl = document.getElementById('balance');
-  if (balanceEl) {
-    balanceEl.innerText = formatMoney(balance);
-  }
-
-  const paymentBalanceEl = document.getElementById('paymentBalance');
-  if (paymentBalanceEl) {
-    paymentBalanceEl.innerText = formatMoney(balance);
-  }
-
-  const historyEl = document.getElementById('history');
-  if (historyEl) {
-    historyEl.innerHTML = history.length
-      ? history.map(item => `<div class="list-item">${item}</div>`).join('')
-      : '<div class="list-item">Aucune transaction pour le moment.</div>';
-  }
-
-  const portfolioEl = document.getElementById('portfolio');
-  if (portfolioEl) {
-    let total = 0;
-    Object.keys(assets).forEach(key => {
-      total += getHoldingValue(key);
-    });
-    portfolioEl.innerText = 'Valeur totale du portefeuille : ' + formatMoney(total);
-  }
-
-  const cashEl = document.getElementById('cashBalance');
-  if (cashEl) {
-    cashEl.innerText = 'Solde disponible : ' + formatMoney(balance);
-  }
-
-  const priceEl = document.getElementById('price');
-  if (priceEl && assets[currentAsset]) {
-    priceEl.innerText = currentAsset + ' : ' + formatMoney(assets[currentAsset].price);
-  }
-
-  const holdingEl = document.getElementById('holding');
-  if (holdingEl && assets[currentAsset]) {
-    const qty = assets[currentAsset].owned;
-    const value = getHoldingValue(currentAsset);
-    holdingEl.innerText = 'Possédé : ' + qty.toFixed(6) + ' unité(s) • Valeur : ' + formatMoney(value);
-  }
-
-  const pnlEl = document.getElementById('pnl');
-  if (pnlEl && assets[currentAsset]) {
-    const pnl = getPnL(currentAsset);
-    pnlEl.innerHTML = `P/L latent : <span class="${pnl >= 0 ? 'positive' : 'negative'}">${pnl >= 0 ? '+' : ''}${formatMoney(pnl)}</span>`;
-  }
-
-  const cryptoHistoryEl = document.getElementById('cryptoHistory');
-  if (cryptoHistoryEl && assets[currentAsset]) {
-    const txs = assets[currentAsset].transactions;
-    cryptoHistoryEl.innerHTML = txs.length
-      ? txs.map(item => `<div class="list-item">${item}</div>`).join('')
-      : '<div class="list-item">Aucune transaction pour le moment.</div>';
-  }
-
-  const assetSelect = document.getElementById('assetSelect');
-  if (assetSelect && assets[currentAsset]) {
-    assetSelect.value = currentAsset;
-  }
-
-  updateCardUI();
-  renderContacts();
-  save();
-}
-
-function renderContacts() {
-  const contactsList = document.getElementById('contactsList');
-  if (!contactsList) return;
-
-  if (contacts.length === 0) {
-    contactsList.innerHTML = '<div class="list-item">Aucun contact enregistré.</div>';
-    return;
-  }
-
-  contactsList.innerHTML = contacts.map((contact, index) => `
-    <div class="list-item">
-      <strong>${contact.name}</strong><br>
-      <span class="small">${contact.iban}</span><br>
-      <div class="row" style="margin-top:8px;">
-        <button onclick="fillContact('${contact.name}', '${contact.iban}')">Utiliser</button>
-        <button class="secondary" onclick="deleteContact(${index})">Supprimer</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-
-function addContact() {
-  const name = prompt('Nom du contact ?');
-  if (name === null || !name.trim()) return;
-
-  const iban = prompt('IBAN du contact ?');
-  if (iban === null || !iban.trim()) return;
-
-  contacts.push({
-    name: name.trim(),
-    iban: iban.trim()
-  });
-
-  save();
-  renderContacts();
-}
-
-function deleteContact(index) {
-  const confirmed = confirm('Supprimer ce contact ?');
-  if (!confirmed) return;
-
-  contacts.splice(index, 1);
-  save();
-  renderContacts();
-}
-
-
-function renderHomeChart() {
-  const canvas = document.getElementById('chart');
-  if (!canvas || typeof Chart === 'undefined') return;
-
-  const values = [];
-  let running = balance;
-  const recent = history.slice(0, 8).reverse();
-
-  if (recent.length === 0) {
-    values.push(balance);
-  } else {
-    for (let i = recent.length - 1; i >= 0; i--) {
-      values.unshift(running);
-      const text = recent[i];
-      const match = text.match(/([+-]?\d+(?:\.\d+)?)\s*€/);
-      if (match) {
-        const amount = Number(match[1]);
-        running -= amount;
-      }
-    }
-    values.push(balance);
-  }
-
-  if (homeChart) {
-    homeChart.destroy();
-  }
-
-  homeChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: values.map((_, i) => 'T' + (i + 1)),
-      datasets: [{
-        data: values,
-        borderColor: '#38bdf8',
-        backgroundColor: 'rgba(56,189,248,0.12)',
-        fill: true,
-        borderWidth: 3,
-        tension: 0.35,
-        pointRadius: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } }
-      }
-    }
-  });
-}
-
-function renderCryptoChart() {
-  const canvas = document.getElementById('cryptoChart');
-  if (!canvas || typeof Chart === 'undefined') return;
-  if (!assets[currentAsset]) return;
-
-  const asset = assets[currentAsset];
-  let data = Array.isArray(asset.history) ? [...asset.history] : [];
-
-  if (data.length < 2) {
-    data = [asset.price, asset.price];
-  }
-
-  const isUp = data[data.length - 1] >= data[0];
-  const borderColor = isUp ? '#22c55e' : '#ef4444';
-  const backgroundColor = isUp ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
-
-  if (cryptoChart) {
-    cryptoChart.destroy();
-  }
-
-  cryptoChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: data.map((_, i) => i + 1),
-      datasets: [{
-        data,
-        borderColor,
-        backgroundColor,
-        fill: true,
-        borderWidth: 3,
-        pointRadius: 2,
-        tension: 0.35
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: { legend: { display: false } },
-      animation: { duration: 450 },
-      scales: {
-        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } }
-      }
-    }
-  });
-}
-
-function addMoney() {
-  const name = prompt('Nom du revenu ?');
-  if (name === null) return;
-
-  const amount = Number(prompt('Montant ?'));
-  if (!amount || amount <= 0) {
-    alert('Montant invalide.');
-    return;
-  }
-
-  balance += amount;
-  history.unshift(`${name} +${amount.toFixed(2)} €`);
-  update();
-  renderHomeChart();
-}
-
-function addExpense() {
-  const name = prompt('Nom de la dépense ?');
-  if (name === null) return;
-
-  const amount = Number(prompt('Montant ?'));
-  if (!amount || amount <= 0) {
-    alert('Montant invalide.');
-    return;
-  }
-
-  balance -= amount;
-  history.unshift(`${name} -${amount.toFixed(2)} €`);
-  update();
-  renderHomeChart();
-}
-
-function fillContact(name, ibanValue) {
-  const nameInput = document.getElementById('paymentName');
-  const ibanInput = document.getElementById('iban');
-
-  if (nameInput) nameInput.value = name;
-  if (ibanInput) ibanInput.value = ibanValue;
-}
-
-function transfer() {
-  const nameInput = document.getElementById('paymentName');
-  const ibanInput = document.getElementById('iban');
-  const amountInput = document.getElementById('amount');
-
-  if (!nameInput || !ibanInput || !amountInput) return;
-
-  const beneficiary = nameInput.value.trim();
-  const iban = ibanInput.value.trim();
-  const amount = Number(amountInput.value);
-
-  if (!beneficiary) return alert('Entre un nom de bénéficiaire.');
-  if (!iban) return alert('Entre un IBAN.');
-  if (!amount || amount <= 0) return alert('Entre un montant valide.');
-  if (amount > balance) return alert("Pas assez d'argent sur le compte.");
-
-  const ok = confirm(`Confirmer le virement de ${formatMoney(amount)} à ${beneficiary} ?`);
-  if (!ok) return;
-
-  balance -= amount;
-  history.unshift(`Virement ${beneficiary} -${amount.toFixed(2)} €`);
-  update();
-  renderHomeChart();
-
-  amountInput.value = '';
-}
-
-function selectAsset(assetKey) {
-  if (!assets[assetKey]) return;
-  currentAsset = assetKey;
-  appState.currentAsset = assetKey;
-  save();
-  update();
-  renderCryptoChart();
-}
-
-function buy() {
-  const input = document.getElementById('investAmount');
-  if (!input) return;
-
-  const amount = Number(input.value);
-  if (!amount || amount <= 0) return alert('Entre un montant valide.');
-  if (amount > balance) return alert("Pas assez d'argent sur le compte.");
-
-  const asset = assets[currentAsset];
-  const qty = amount / asset.price;
-  const oldQty = asset.owned;
-  const oldCost = oldQty * asset.avgBuyPrice;
-
-  asset.owned += qty;
-  asset.avgBuyPrice = (oldCost + amount) / asset.owned;
-  balance -= amount;
-
-  const line = `Achat ${currentAsset} • ${formatMoney(amount)} • ${qty.toFixed(6)} unité(s) à ${formatMoney(asset.price)}`;
-  asset.transactions.unshift(line);
-  history.unshift(line);
-
-  input.value = '';
-  update();
-  renderHomeChart();
-  renderCryptoChart();
-}
-
-function sellPartial() {
-  const input = document.getElementById('sellAmount');
-  if (!input) return;
-
-  const qty = Number(input.value);
-  const asset = assets[currentAsset];
-
-  if (!qty || qty <= 0) return alert('Entre une quantité valide à vendre.');
-  if (qty > asset.owned) return alert('Tu ne possèdes pas autant de cette valeur.');
-
-  const saleValue = qty * asset.price;
-  const costBasis = qty * asset.avgBuyPrice;
-  const pnl = saleValue - costBasis;
-
-  balance += saleValue;
-  asset.owned -= qty;
-
-  if (asset.owned <= 0.0000001) {
-    asset.owned = 0;
-    asset.avgBuyPrice = 0;
-  }
-
-  const line = `Vente partielle ${currentAsset} • ${formatMoney(saleValue)} • ${qty.toFixed(6)} unité(s) • ${pnl >= 0 ? 'Gain' : 'Perte'} ${formatMoney(pnl)}`;
-  asset.transactions.unshift(line);
-  history.unshift(line);
-
-  input.value = '';
-  update();
-  renderHomeChart();
-  renderCryptoChart();
-}
-
-function sellAll() {
-  const asset = assets[currentAsset];
-  if (asset.owned <= 0) return alert('Tu ne possèdes rien à vendre sur cet actif.');
-
-  const qty = asset.owned;
-  const saleValue = qty * asset.price;
-  const costBasis = qty * asset.avgBuyPrice;
-  const pnl = saleValue - costBasis;
-
-  balance += saleValue;
-
-  const line = `Vente ${currentAsset} • ${formatMoney(saleValue)} • ${qty.toFixed(6)} unité(s) • ${pnl >= 0 ? 'Gain' : 'Perte'} ${formatMoney(pnl)}`;
-  asset.transactions.unshift(line);
-  history.unshift(line);
-
-  asset.owned = 0;
-  asset.avgBuyPrice = 0;
-
-  update();
-  renderHomeChart();
-  renderCryptoChart();
-}
-
-function pressPin(n) {
-  pinValue += String(n);
-  const dots = document.getElementById('pinDots');
-
-  if (dots) {
-    const shown = pinValue.split('').map(() => '•').join(' ');
-    dots.innerText = shown || '• • • •';
-  }
-
-  if (pinValue.length === 4) {
-    if (pinValue === '0206') {
-      window.location.href = 'home.html';
-    } else {
-      alert('Code incorrect');
-      pinValue = '';
-      if (dots) dots.innerText = '• • • •';
-    }
-  }
-}
-
-function clearPin() {
-  pinValue = '';
-  const dots = document.getElementById('pinDots');
-  if (dots) dots.innerText = '• • • •';
-}
-
-function logout() {
-  pinValue = '';
-  window.location.href = 'login.html';
-}
 
 function flipCard() {
   const cardInner = document.getElementById('cardInner');
@@ -587,29 +167,670 @@ function updateCardUI() {
   }
 }
 
-setInterval(() => {
-  Object.keys(assets).forEach(key => {
-    const asset = assets[key];
-    const change = (Math.random() * 2 - 1) * asset.price * 0.02;
-    asset.price = Math.max(0.01, asset.price + change);
+function getCurrentUser() {
+  const username = getCurrentUsername();
+  if (!username) return null;
+  const users = getUsers();
+  return users[username] || null;
+}
 
-    if (!Array.isArray(asset.history)) {
-      asset.history = [asset.price];
-    }
+function saveCurrentUser(user) {
+  const username = getCurrentUsername();
+  if (!username) return;
+  const users = getUsers();
+  users[username] = user;
+  saveUsers(users);
+}
 
-    asset.history.push(asset.price);
+function formatMoney(value) {
+  return Number(value).toFixed(2) + ' €';
+}
 
-    if (asset.history.length > 30) {
-      asset.history.shift();
+function getBalance() {
+  const user = getCurrentUser();
+  return user ? user.game.accounts[user.game.activeAccount] : 0;
+}
+
+function setBalance(value) {
+  const user = getCurrentUser();
+  if (!user) return;
+  user.game.accounts[user.game.activeAccount] = value;
+  saveCurrentUser(user);
+}
+
+function addHistory(line) {
+  const user = getCurrentUser();
+  if (!user) return;
+  user.game.history.unshift(line);
+  saveCurrentUser(user);
+}
+
+function getNextUpgrade(level) {
+  const upgrades = {
+    1: { cost: 500, value: 10, nextLevel: 2 },
+    2: { cost: 10000, value: 50, nextLevel: 3 },
+    3: { cost: 100000, value: 250, nextLevel: 4 }
+  };
+  return upgrades[level] || null;
+}
+
+function updateHomeUI() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const balanceEl = document.getElementById('balance');
+  const historyEl = document.getElementById('history');
+  const welcomeEl = document.getElementById('welcomeUser');
+  const clickLevelText = document.getElementById('clickLevelText');
+  const clickUpgradeInfo = document.getElementById('clickUpgradeInfo');
+  const loanInfo = document.getElementById('loanInfo');
+  const loanList = document.getElementById('loanList');
+  const accountsList = document.getElementById('accountsList');
+  const paymentBalanceEl = document.getElementById('paymentBalance');
+
+  if (balanceEl) {
+    balanceEl.innerText = formatMoney(getBalance());
+  }
+
+  if (paymentBalanceEl) {
+    paymentBalanceEl.innerText = formatMoney(getBalance());
+  } 
+
+  if (welcomeEl) {
+    welcomeEl.innerText = `Bienvenue ${getCurrentUsername()} • Compte actif : ${user.game.activeAccount}`;
+  }
+
+  if (clickLevelText) {
+    clickLevelText.innerText = `Gain par clic : ${user.game.clickValue} €`;
+  }
+
+  if (clickUpgradeInfo) {
+    const next = getNextUpgrade(user.game.clickLevel);
+    clickUpgradeInfo.innerText = next
+      ? `Niveau actuel : ${user.game.clickLevel} • Prochaine amélioration : ${next.cost} € pour passer à ${next.value} €/clic`
+      : `Niveau maximal atteint`;
+  }
+
+  if (loanInfo) {
+    const totalLoans = user.game.loans.reduce((sum, loan) => sum + loan.amountRemaining, 0);
+    loanInfo.innerText = `Dette totale : ${formatMoney(totalLoans)}`;
+  }
+
+  if (loanList) {
+    loanList.innerHTML = user.game.loans.length
+      ? user.game.loans.map((loan, index) => `
+          <div class="list-item">
+            Crédit #${index + 1} — restant : ${formatMoney(loan.amountRemaining)}
+          </div>
+        `).join('')
+      : '<div class="list-item">Aucun crédit en cours.</div>';
+  }
+
+  if (accountsList) {
+    accountsList.innerHTML = Object.entries(user.game.accounts)
+      .map(([name, amount]) => `
+        <div class="list-item">
+          <strong>${name}</strong> — ${formatMoney(amount)}
+          ${name === user.game.activeAccount ? '<span class="small"> (actif)</span>' : ''}
+        </div>
+      `).join('');
+  }
+
+  if (historyEl) {
+    historyEl.innerHTML = user.game.history.length
+      ? user.game.history.map(item => `<div class="list-item">${item}</div>`).join('')
+      : '<div class="list-item">Aucune transaction pour le moment.</div>';
+  }
+}
+
+function getNextUpgrade(level) {
+  const upgrades = {
+    1: { cost: 500, value: 10, nextLevel: 2 },
+    2: { cost: 10000, value: 50, nextLevel: 3 },
+    3: { cost: 100000, value: 250, nextLevel: 4 }
+  };
+  return upgrades[level] || null;
+}
+
+function updateCryptoUI() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const assetKey = user.crypto.currentAsset;
+  const asset = user.crypto.assets[assetKey];
+  if (!asset) return;
+
+  const assetSelect = document.getElementById('assetSelect');
+  const portfolioEl = document.getElementById('portfolio');
+  const cashBalanceEl = document.getElementById('cashBalance');
+  const priceEl = document.getElementById('price');
+  const holdingEl = document.getElementById('holding');
+  const pnlEl = document.getElementById('pnl');
+  const cryptoHistoryEl = document.getElementById('cryptoHistory');
+
+  if (assetSelect) assetSelect.value = assetKey;
+
+  if (portfolioEl) {
+    let total = 0;
+    Object.values(user.crypto.assets).forEach(a => {
+      total += a.owned * a.price;
+    });
+    portfolioEl.innerText = 'Valeur totale du portefeuille : ' + formatMoney(total);
+  }
+
+  if (cashBalanceEl) {
+    cashBalanceEl.innerText = 'Solde disponible : ' + formatMoney(getBalance());
+  }
+
+  if (priceEl) {
+    priceEl.innerText = `${assetKey} : ${formatMoney(asset.price)}`;
+  }
+
+  if (holdingEl) {
+    holdingEl.innerText = `Possédé : ${asset.owned.toFixed(6)} unité(s) • Valeur : ${formatMoney(asset.owned * asset.price)}`;
+  }
+
+  if (pnlEl) {
+    const pnl = asset.owned > 0 ? (asset.price - asset.avgBuyPrice) * asset.owned : 0;
+    pnlEl.innerHTML = `P/L latent : <span class="${pnl >= 0 ? 'positive' : 'negative'}">${pnl >= 0 ? '+' : ''}${formatMoney(pnl)}</span>`;
+  }
+
+  if (cryptoHistoryEl) {
+    cryptoHistoryEl.innerHTML = asset.transactions.length
+      ? asset.transactions.map(item => `<div class="list-item">${item}</div>`).join('')
+      : '<div class="list-item">Aucune transaction pour le moment.</div>';
+  }
+
+  renderCryptoChart();
+}
+
+function renderCryptoChart() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const canvas = document.getElementById('cryptoChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const asset = user.crypto.assets[user.crypto.currentAsset];
+  if (!asset) return;
+
+  let data = Array.isArray(asset.history) ? [...asset.history] : [];
+  if (data.length < 2) {
+    data = [asset.price, asset.price];
+  }
+
+  const isUp = data[data.length - 1] >= data[0];
+  const borderColor = isUp ? '#22c55e' : '#ef4444';
+  const backgroundColor = isUp ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+
+  if (cryptoChart) cryptoChart.destroy();
+
+  cryptoChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map((_, i) => i + 1),
+      datasets: [{
+        data,
+        borderColor,
+        backgroundColor,
+        fill: true,
+        borderWidth: 3,
+        pointRadius: 2,
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      animation: { duration: 450 },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } }
+      }
     }
   });
+}
 
-  update();
-  renderCryptoChart();
-}, 2000);
+function clickMoney() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  user.game.accounts[user.game.activeAccount] += user.game.clickValue;
+  user.game.history.unshift(`Clic manuel +${user.game.clickValue.toFixed(2)} €`);
+  saveCurrentUser(user);
+  updateHomeUI();
+  updateCryptoUI();
+}
+
+function claimDailyBonus() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const now = Date.now();
+  const oneDay = 24 * 60 * 60 * 1000;
+
+  if (now - user.game.lastDailyBonus < oneDay) {
+    alert('Bonus journalier déjà récupéré.');
+    return;
+  }
+
+  const bonus = 250;
+  user.game.lastDailyBonus = now;
+  user.game.accounts[user.game.activeAccount] += bonus;
+  user.game.history.unshift(`Bonus journalier +${bonus.toFixed(2)} €`);
+  saveCurrentUser(user);
+  updateHomeUI();
+  updateCryptoUI();
+}
+
+function upgradeClickIncome() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const next = getNextUpgrade(user.game.clickLevel);
+  if (!next) return alert('Niveau maximal atteint.');
+
+  if (getBalance() < next.cost) {
+    return alert(`Pas assez d'argent. Il faut ${next.cost} €.`);
+  }
+
+  user.game.accounts[user.game.activeAccount] -= next.cost;
+  user.game.clickValue = next.value;
+  user.game.clickLevel = next.nextLevel;
+  user.game.history.unshift(`Amélioration du clic -${next.cost.toFixed(2)} € → ${next.value} €/clic`);
+  saveCurrentUser(user);
+  updateHomeUI();
+  updateCryptoUI();
+}
+
+function takeLoan(amount) {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const repayment = amount * 1.2;
+  user.game.accounts[user.game.activeAccount] += amount;
+  user.game.loans.push({
+    id: Date.now(),
+    principal: amount,
+    amountRemaining: repayment
+  });
+  user.game.history.unshift(`Crédit obtenu +${amount.toFixed(2)} € (remboursement ${repayment.toFixed(2)} €)`);
+  saveCurrentUser(user);
+  updateHomeUI();
+  updateCryptoUI();
+}
+
+function repayLoanManual() {
+  const user = getCurrentUser();
+  if (!user) return;
+  processLoanPayment(user, 100, true);
+}
+
+function processLoanPayment(user, amount, manual = false) {
+  if (!user.game.loans.length) {
+    if (manual) alert('Aucun crédit à rembourser.');
+    return;
+  }
+
+  let available = user.game.accounts[user.game.activeAccount];
+  if (available <= 0) {
+    if (manual) alert("Pas assez d'argent sur le compte actif.");
+    return;
+  }
+
+  let remainingPayment = Math.min(amount, available);
+  let paidTotal = 0;
+
+  while (remainingPayment > 0 && user.game.loans.length > 0) {
+    const loan = user.game.loans[0];
+    const payment = Math.min(loan.amountRemaining, remainingPayment);
+
+    loan.amountRemaining -= payment;
+    remainingPayment -= payment;
+    paidTotal += payment;
+    user.game.accounts[user.game.activeAccount] -= payment;
+
+    if (loan.amountRemaining <= 0.001) {
+      user.game.loans.shift();
+    }
+  }
+
+  if (paidTotal > 0) {
+    user.game.history.unshift(`Remboursement crédit -${paidTotal.toFixed(2)} €`);
+    saveCurrentUser(user);
+    updateHomeUI();
+    updateCryptoUI();
+  }
+}
+
+function autoLoanPaymentTick() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const now = Date.now();
+  const fiveMinutes = 5 * 60 * 1000;
+
+  if (now - user.game.lastLoanAutoPayment < fiveMinutes) return;
+  if (!user.game.loans.length) return;
+
+  user.game.lastLoanAutoPayment = now;
+  processLoanPayment(user, 100, false);
+  saveCurrentUser(user);
+}
+
+function addSubAccount() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const name = prompt('Nom du nouveau compte ?');
+  if (!name || !name.trim()) return;
+
+  if (user.game.accounts[name]) {
+    alert('Ce compte existe déjà.');
+    return;
+  }
+
+  user.game.accounts[name] = 0;
+  user.game.history.unshift(`Nouveau compte créé : ${name}`);
+  saveCurrentUser(user);
+  updateHomeUI();
+}
+
+function switchSubAccount() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const names = Object.keys(user.game.accounts);
+  const chosen = prompt(`Choisis un compte : ${names.join(', ')}`);
+  if (!chosen) return;
+
+  if (!user.game.accounts.hasOwnProperty(chosen)) {
+    alert('Compte introuvable.');
+    return;
+  }
+
+  user.game.activeAccount = chosen;
+  saveCurrentUser(user);
+  updateHomeUI();
+  updateCryptoUI();
+}
+
+function pressPin(n) {
+  pinValue += String(n);
+  const dots = document.getElementById('pinDots');
+
+  if (dots) {
+    const shown = pinValue.split('').map(() => '•').join(' ');
+    dots.innerText = shown || '• • • •';
+  }
+}
+
+function clearPin() {
+  pinValue = '';
+  const dots = document.getElementById('pinDots');
+  if (dots) dots.innerText = '• • • •';
+}
+
+function loginUser() {
+  const usernameInput = document.getElementById('loginUsername');
+  if (!usernameInput) return;
+
+  const username = usernameInput.value.trim();
+  if (!username) return alert("Entre un nom d'utilisateur.");
+  if (pinValue.length !== 4) return alert('Entre un code PIN à 4 chiffres.');
+
+  const users = getUsers();
+  const user = users[username];
+
+  if (!user) return alert("Ce compte n'existe pas.");
+  if (user.pin !== pinValue) {
+    alert('Code PIN incorrect.');
+    clearPin();
+    return;
+  }
+
+  setCurrentUsername(username);
+  clearPin();
+  window.location.href = 'home.html';
+}
+
+function startCreateAccount() {
+  const usernameInput = document.getElementById('loginUsername');
+  if (!usernameInput) return;
+
+  const username = usernameInput.value.trim();
+  if (!username) return alert("Entre d'abord un nom d'utilisateur.");
+  if (pinValue.length !== 4) return alert('Entre un code PIN à 4 chiffres.');
+
+  const users = getUsers();
+  if (users[username]) {
+    alert('Ce nom existe déjà.');
+    return;
+  }
+
+  const newUser = createDefaultUser(pinValue);
+  newUser.profile.username = username;
+
+  users[username] = newUser;
+  saveUsers(users);
+  setCurrentUsername(username);
+  clearPin();
+  window.location.href = 'home.html';
+}
+
+function logout() {
+  clearPin();
+  clearCurrentUsername();
+}
+
+function transfer() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const nameInput = document.getElementById('paymentName');
+  const amountInput = document.getElementById('amount');
+
+  if (!nameInput || !amountInput) return;
+
+  const beneficiary = nameInput.value.trim();
+  const amount = Number(amountInput.value);
+
+  if (!beneficiary) return alert('Entre un bénéficiaire.');
+  if (!amount || amount <= 0) return alert('Entre un montant valide.');
+  if (amount > getBalance()) return alert("Pas assez d'argent.");
+
+  user.game.accounts[user.game.activeAccount] -= amount;
+  user.game.history.unshift(`Virement ${beneficiary} -${amount.toFixed(2)} €`);
+  saveCurrentUser(user);
+
+  amountInput.value = '';
+  updateHomeUI();
+  syncLegacyPages();
+}
+
+function fillContact(name, ibanValue) {
+  const nameInput = document.getElementById('paymentName');
+  const ibanInput = document.getElementById('iban');
+  if (nameInput) nameInput.value = name;
+  if (ibanInput) ibanInput.value = ibanValue;
+}
+
+function renderContacts() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const contactsList = document.getElementById('contactsList');
+  if (!contactsList) return;
+
+  const contacts = user.banking.contacts || [];
+  contactsList.innerHTML = contacts.length
+    ? contacts.map((contact, index) => `
+      <div class="list-item">
+        <strong>${contact.name}</strong><br>
+        <span class="small">${contact.iban}</span><br>
+        <div class="row" style="margin-top:8px;">
+          <button onclick="fillContact('${contact.name}', '${contact.iban}')">Utiliser</button>
+          <button class="secondary" onclick="deleteContact(${index})">Supprimer</button>
+        </div>
+      </div>
+    `).join('')
+    : '<div class="list-item">Aucun contact enregistré.</div>';
+}
+
+function addContact() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const name = prompt('Nom du contact ?');
+  if (!name || !name.trim()) return;
+
+  const iban = prompt('IBAN du contact ?');
+  if (!iban || !iban.trim()) return;
+
+  user.banking.contacts.push({ name: name.trim(), iban: iban.trim() });
+  saveCurrentUser(user);
+  renderContacts();
+}
+
+function deleteContact(index) {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  user.banking.contacts.splice(index, 1);
+  saveCurrentUser(user);
+  renderContacts();
+}
+
+function selectAsset(assetKey) {
+  const user = getCurrentUser();
+  if (!user || !user.crypto.assets[assetKey]) return;
+  user.crypto.currentAsset = assetKey;
+  saveCurrentUser(user);
+  syncLegacyPages();
+}
+
+function buy() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const input = document.getElementById('investAmount');
+  if (!input) return;
+
+  const amount = Number(input.value);
+  if (!amount || amount <= 0) return alert('Entre un montant valide.');
+  if (amount > getBalance()) return alert("Pas assez d'argent.");
+
+  const asset = user.crypto.assets[user.crypto.currentAsset];
+  const qty = amount / asset.price;
+  const oldQty = asset.owned;
+  const oldCost = oldQty * asset.avgBuyPrice;
+
+  asset.owned += qty;
+  asset.avgBuyPrice = (oldCost + amount) / asset.owned;
+  user.game.accounts[user.game.activeAccount] -= amount;
+
+  const line = `Achat ${user.crypto.currentAsset} • ${formatMoney(amount)} • ${qty.toFixed(6)} unité(s)`;
+  asset.transactions.unshift(line);
+  user.game.history.unshift(line);
+
+  saveCurrentUser(user);
+  input.value = '';
+  updateHomeUI();
+  syncLegacyPages();
+}
+
+function sellPartial() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const input = document.getElementById('sellAmount');
+  if (!input) return;
+
+  const qty = Number(input.value);
+  const asset = user.crypto.assets[user.crypto.currentAsset];
+
+  if (!qty || qty <= 0) return alert('Quantité invalide.');
+  if (qty > asset.owned) return alert('Pas assez d’unités.');
+
+  const saleValue = qty * asset.price;
+  const costBasis = qty * asset.avgBuyPrice;
+  const pnl = saleValue - costBasis;
+
+  asset.owned -= qty;
+  if (asset.owned <= 0.0000001) {
+    asset.owned = 0;
+    asset.avgBuyPrice = 0;
+  }
+
+  user.game.accounts[user.game.activeAccount] += saleValue;
+
+  const line = `Vente partielle ${user.crypto.currentAsset} • ${formatMoney(saleValue)} • ${pnl >= 0 ? 'Gain' : 'Perte'} ${formatMoney(pnl)}`;
+  asset.transactions.unshift(line);
+  user.game.history.unshift(line);
+
+  saveCurrentUser(user);
+  input.value = '';
+  updateHomeUI();
+  syncLegacyPages();
+}
+
+function sellAll() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const asset = user.crypto.assets[user.crypto.currentAsset];
+  if (asset.owned <= 0) return alert('Rien à vendre.');
+
+  const qty = asset.owned;
+  const saleValue = qty * asset.price;
+  const costBasis = qty * asset.avgBuyPrice;
+  const pnl = saleValue - costBasis;
+
+  user.game.accounts[user.game.activeAccount] += saleValue;
+
+  const line = `Vente ${user.crypto.currentAsset} • ${formatMoney(saleValue)} • ${pnl >= 0 ? 'Gain' : 'Perte'} ${formatMoney(pnl)}`;
+  asset.transactions.unshift(line);
+  user.game.history.unshift(line);
+
+  asset.owned = 0;
+  asset.avgBuyPrice = 0;
+
+  saveCurrentUser(user);
+  updateHomeUI();
+  syncLegacyPages();
+}
+
+function tickCryptoPrices() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  Object.keys(user.crypto.assets).forEach(key => {
+    const asset = user.crypto.assets[key];
+    const change = (Math.random() * 2 - 1) * asset.price * 0.02;
+    asset.price = Math.max(0.01, asset.price + change);
+    asset.history.push(asset.price);
+    if (asset.history.length > 30) asset.history.shift();
+  });
+
+  saveCurrentUser(user);
+  updateCryptoUI();
+}
 
 window.onload = () => {
-  update();
-  renderHomeChart();
-  renderCryptoChart();
+  const currentPage = window.location.pathname.split('/').pop();
+
+  if (currentPage !== 'login.html' && !getCurrentUser()) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  updateHomeUI();
+  syncLegacyPages();
+  renderContacts();
+
+  setInterval(() => {
+    tickCryptoPrices();
+    autoLoanPaymentTick();
+  }, 2000);
 };

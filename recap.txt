@@ -9,3 +9,6 @@ rafael-bank/
 
 
 © 2026 Rafael Compagny — Micro-entreprise · Tous droits réservés
+
+localStorage.clear();
+location.reload();

@@ -10,25 +10,54 @@
 <body>
   <div class="container">
     <div class="topbar">
-      <h2>Accueil</h2>
+      <div>
+        <h2>Accueil</h2>
+        <p class="small" id="welcomeUser">Bienvenue</p>
+      </div>
       <div class="top-actions">
-        <a class="btn-link secondary" href="index.html" onclick="logout()">Se déconnecter</a>
+        <a class="btn-link secondary" href="login.html" onclick="logout()">Se déconnecter</a>
       </div>
     </div>
 
     <div class="card">
       <p class="small">Solde principal</p>
       <h2 id="balance">0.00 €</h2>
+      <p class="small" id="clickLevelText">Gain par clic : 1 €</p>
     </div>
-
-    <canvas id="chart" height="120"></canvas>
 
     <div class="row">
-      <button onclick="addMoney()">+ Revenu</button>
-      <button onclick="addExpense()">- Dépense</button>
+      <button onclick="clickMoney()">+1 clic</button>
+      <button onclick="claimDailyBonus()">Bonus journalier</button>
+      <button onclick="upgradeClickIncome()">Améliorer le clic</button>
     </div>
 
-    <h3>Historique global</h3>
+    <div class="card" style="margin-top:16px;">
+      <h3>Progression</h3>
+      <p id="clickUpgradeInfo"></p>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Crédits</h3>
+      <div class="row">
+        <button onclick="takeLoan(500)">Crédit 500 €</button>
+        <button onclick="takeLoan(2000)">Crédit 2 000 €</button>
+        <button onclick="takeLoan(10000)">Crédit 10 000 €</button>
+        <button class="secondary" onclick="repayLoanManual()">Rembourser 100 €</button>
+      </div>
+      <p id="loanInfo"></p>
+      <div id="loanList"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Comptes</h3>
+      <div id="accountsList"></div>
+      <div class="row">
+        <button onclick="addSubAccount()">Ajouter un compte</button>
+        <button class="secondary" onclick="switchSubAccount()">Changer de compte</button>
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">Historique global</h3>
     <div id="history"></div>
   </div>
 
@@ -39,7 +68,6 @@
     <a href="crypto.html">Crypto</a>
   </nav>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

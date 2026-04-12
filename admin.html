@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Rafael Bank</title>
+  <link rel="shortcut icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h2>Admin Dashboard</h2>
+      <div class="top-actions">
+        <a class="btn-link secondary" href="login.html" onclick="logout()">Se déconnecter</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Vue globale des joueurs</h3>
+      <p class="small">Visible uniquement pour le compte admin.</p>
+    </div>
+
+    <div id="adminUsersList" style="margin-top:16px;"></div>
+  </div>
+
+    <nav>
+        <a href="home.html">Accueil</a>
+        <a href="cards.html">Cartes</a>
+        <a href="payments.html">Paiement</a>
+        <a href="crypto.html">Crypto</a>
+        <a id="adminNavLink" href="admin.html" style="display:none;">Admin</a>
+    </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>

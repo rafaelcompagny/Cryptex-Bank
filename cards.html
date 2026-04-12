@@ -12,7 +12,7 @@
     <div class="topbar">
       <h2>Ma carte</h2>
       <div class="top-actions">
-        <a class="btn-link secondary" href="index.html" onclick="logout()">Se déconnecter</a>
+        <a class="btn-link secondary" href="login.html" onclick="logout()">Se déconnecter</a>
       </div>
     </div>
 
@@ -37,12 +37,12 @@
           <div class="card-number" id="maskedCardNumber">**** **** **** 4821</div>
 
           <div class="card-meta">
-            <span>RAFAEL</span>
+            <span id="cardOwnerName">UTILISATEUR</span>
             <span id="maskedExpiry">••/••</span>
           </div>
 
           <div class="card-bottom-logos">
-            <div class="apple-pay-logo"> Pay</div>
+            <div class="apple-pay-logo">Samsung Pay</div>
             <div class="visa-logo">VISA</div>
           </div>
         </div>
@@ -70,6 +70,7 @@
     <a href="cards.html">Cartes</a>
     <a href="payments.html">Paiement</a>
     <a href="crypto.html">Crypto</a>
+    <a id="adminNavLink" href="admin.html" style="display:none;">Admin</a>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

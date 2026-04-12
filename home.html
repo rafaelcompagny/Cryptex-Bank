@@ -25,10 +25,14 @@
       <p class="small" id="clickLevelText">Gain par clic : 1 €</p>
     </div>
 
+    <p id="boostInfo" class="small"></p>
+
     <div class="row">
       <button onclick="clickMoney()">+1 clic</button>
       <button onclick="claimDailyBonus()">Bonus journalier</button>
       <button onclick="upgradeClickIncome()">Améliorer le clic</button>
+      <button class="secondary" onclick="buyDoubleMoneyBoost()">x2 argent (1 min)</button>
+      <button id="adminAddMoneyBtn" style="display:none;" onclick="adminAddUnlimitedMoney()">Ajouter de l'argent</button>
     </div>
 
     <div class="card" style="margin-top:16px;">
@@ -42,9 +46,10 @@
         <button onclick="takeLoan(500)">Crédit 500 €</button>
         <button onclick="takeLoan(2000)">Crédit 2 000 €</button>
         <button onclick="takeLoan(10000)">Crédit 10 000 €</button>
-        <button class="secondary" onclick="repayLoanManual()">Rembourser 100 €</button>
+        <button class="secondary" onclick="repayAllLoans()">Rembourser tout</button>
       </div>
       <p id="loanInfo"></p>
+      <p id="loanTimer" class="small"></p>
       <div id="loanList"></div>
     </div>
 
@@ -66,6 +71,7 @@
     <a href="cards.html">Cartes</a>
     <a href="payments.html">Paiement</a>
     <a href="crypto.html">Crypto</a>
+    <a id="adminNavLink" href="admin.html" style="display:none;">Admin</a>
   </nav>
 
   <script src="app.js"></script>

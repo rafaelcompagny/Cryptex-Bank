@@ -34,6 +34,31 @@
     <p id="holding"></p>
     <p id="pnl"></p>
 
+    <div id="adminCryptoPanel" class="card" style="display:none; margin-bottom:16px;">
+      <h3>Contrôle admin des cryptos</h3>
+      <p class="small">Active ou coupe l'évolution automatique, puis choisis les prix manuellement.</p>
+
+      <div class="row">
+        <button id="toggleCryptoModeBtn" onclick="toggleCryptoAdminMode()">Passer en mode manuel</button>
+      </div>
+
+      <div class="row">
+        <select id="adminAssetSelect" onchange="syncAdminAssetSelection(this.value)">
+          <option value="BTC">Bitcoin</option>
+          <option value="ETH">Ethereum</option>
+          <option value="AAPL">Apple</option>
+          <option value="TSLA">Tesla</option>
+          <option value="NVDA">Nvidia</option>
+          <option value="RCOP">Rafael Company</option>
+        </select>
+
+        <input id="adminAssetPrice" type="number" min="0.01" step="0.01" placeholder="Nouveau prix">
+        <button onclick="adminSetCryptoPrice()">Appliquer le prix</button>
+      </div>
+
+      <p id="cryptoModeInfo" class="small"></p>
+    </div>
+
     <div class="row">
       <input id="investAmount" type="number" min="0" step="0.01" placeholder="Montant à investir">
       <button onclick="buy()">Acheter</button>
@@ -54,6 +79,7 @@
     <a href="cards.html">Cartes</a>
     <a href="payments.html">Paiement</a>
     <a href="crypto.html">Crypto</a>
+    <a id="adminNavLink" href="admin.html" style="display:none;">Admin</a>
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

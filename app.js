@@ -18,6 +18,7 @@ let cryptoChart = null;
 let historyPage = 1;
 const HISTORY_PER_PAGE = 10;
 let currentAdminUid = null;
+let currentLeaderboardType = "wealth";
 
 /* ================= HELPE50RS ================= */
 
@@ -46,6 +47,15 @@ function formatMoney(value) {
   return n.toLocaleString("fr-FR", {
     maximumFractionDigits: 2
   }) + " €";
+}
+
+function getTotalPassiveIncome(profile) {
+  profile.investments = profile.investments || {};
+
+  return INVESTMENTS.reduce((total, inv) => {
+    const qty = profile.investments[inv.id] || 0;
+    return total + qty * inv.incomePerSecond;
+  }, 0);
 }
 
 function getNextUpgrade(level) {
@@ -211,12 +221,20 @@ async function renderHome(uid) {
   const clickValue = profile.clickValue || 1;
   const clickLevel = profile.clickLevel || 1;
   const now = Date.now();
+  const starterBoostActive = now < (profile.shop?.starterBoostUntil || 0);
 
   const permanentMultiplier = profile.shop?.permanentMultiplier || 1;
-  const starterBoostActive = now < (profile.shop?.starterBoostUntil || 0);
   const timeBoostMultiplier = now < (boost.doubleMoneyUntil || 0) ? 2 : 1;
-  const starterMultiplier = starterBoostActive ? 2 : 1;
-  const displayedClickValue = clickValue * permanentMultiplier * timeBoostMultiplier * starterMultiplier;
+  const starterMultiplier = now < (profile.shop?.starterBoostUntil || 0) ? 2 : 1;
+  const leaderboardMultiplier =
+    now < (profile.shop?.leaderboardClickMultiplierUntil || 0) ? 2 : 1;
+
+  const displayedClickValue =
+    clickValue *
+    permanentMultiplier *
+    timeBoostMultiplier *
+    starterMultiplier *
+    leaderboardMultiplier;
 
   const autoClickToggleBtn = document.getElementById("autoClickToggleBtn");
   const historyPrevBtn = document.getElementById("historyPrevBtn");
@@ -225,6 +243,7 @@ async function renderHome(uid) {
 
   const passiveIncomeInfo = document.getElementById("passiveIncomeInfo");
   const investmentsList = document.getElementById("investmentsList");
+  const homePassiveIncomeText = document.getElementById("homePassiveIncomeText");
 
   if (balanceEl) balanceEl.innerText = formatMoney(balance);
   if (welcomeEl) {
@@ -236,7 +255,11 @@ async function renderHome(uid) {
     if (permanentMultiplier > 1) suffix += ` • x${permanentMultiplier} à vie`;
     if (timeBoostMultiplier > 1) suffix += ` • x2 actif`;
     if (starterMultiplier > 1) suffix += ` • pack débutant`;
-    clickLevelText.innerText = `Gain par clic : ${formatMoney(displayedClickValue)} €${suffix}`;
+    if (timeBoostMultiplier > 1) suffix += " • x2 boost";
+    if (starterMultiplier > 1) suffix += " • starter x2";
+    if (leaderboardMultiplier > 1) suffix += " • TOP 1 x2";
+
+    clickLevelText.innerText = `Gain par clic : ${formatMoney(displayedClickValue)}${suffix}`;
   }
 
   const nextUpgrade = getNextUpgrade(clickLevel);
@@ -412,6 +435,10 @@ async function renderHome(uid) {
     passiveIncomeInfo.innerText = `Revenus passifs : ${formatMoney(totalPassiveIncome)} / sec`;
   }
 
+  if (homePassiveIncomeText) {
+    homePassiveIncomeText.innerText = `Revenus passifs : ${formatMoney(getTotalPassiveIncome(profile))} / sec`;
+  }
+
   if (investmentsList) {
     investmentsList.innerHTML = INVESTMENTS.map(inv => {
       const qty = profile.investments[inv.id] || 0;
@@ -573,6 +600,63 @@ async function autoLoanPaymentFirebase(uid) {
   await renderHome(uid);
 }
 
+
+/*=============== CRYPTO ==============*/
+
+async function renderInvestmentsInsideCrypto(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const incomeEl = document.getElementById("investmentIncomeInfo");
+  const grid = document.getElementById("investmentsShop");
+
+  if (!incomeEl || !grid) return;
+
+  const activeAccount = profile.activeAccount || "Principal";
+  const balance = profile.accounts?.[activeAccount] || 0;
+  const totalIncome = getTotalPassiveIncome(profile);
+
+  incomeEl.innerText = `Revenus passifs : ${formatMoney(totalIncome)} / sec`;
+
+  profile.investments = profile.investments || {};
+
+  grid.innerHTML = INVESTMENTS.map(inv => {
+    const qty = profile.investments[inv.id] || 0;
+    const canBuy = balance >= inv.cost;
+
+    return `
+      <div class="investment-card">
+        ${qty > 0 ? `<div class="investment-owned">x${qty}</div>` : ""}
+
+        <div>
+          <div class="investment-emoji">${inv.emoji}</div>
+          <h3>${escapeHtml(inv.name)}</h3>
+          <p class="small">Génère automatiquement de l'argent.</p>
+
+          <div class="investment-stats">
+            <div class="investment-stat">Prix : <strong>${formatMoney(inv.cost)}</strong></div>
+            <div class="investment-stat">Gain : <strong>${formatMoney(inv.incomePerSecond)} / sec</strong></div>
+            <div class="investment-stat">Revenu actuel : <strong>${formatMoney(qty * inv.incomePerSecond)} / sec</strong></div>
+          </div>
+        </div>
+
+        <button class="buy-investment-page-btn" data-investment-id="${inv.id}" ${canBuy ? "" : "disabled"}>
+          ${canBuy ? "Acheter" : "Pas assez d'argent"}
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  document.querySelectorAll(".buy-investment-page-btn").forEach(btn => {
+    btn.onclick = async () => {
+      await buyInvestment(uid, btn.dataset.investmentId);
+      await renderCrypto(uid);
+      await renderInvestmentsInsideCrypto(uid);
+    };
+  });
+}
+
+
 async function buyInvestment(uid, investmentId) {
   const profile = await getUserProfile(uid);
   if (!profile) return;
@@ -689,10 +773,24 @@ async function initHome(user) {
       const permanentMultiplier = profile.shop?.permanentMultiplier || 1;
       const timeBoostMultiplier = Date.now() < (profile.boost?.doubleMoneyUntil || 0) ? 2 : 1;
       const starterMultiplier = Date.now() < (profile.shop?.starterBoostUntil || 0) ? 2 : 1;
-      const gain = clickValue * permanentMultiplier * timeBoostMultiplier * starterMultiplier;
+
+      const leaderboardMultiplier =
+        Date.now() < (profile.shop?.leaderboardClickMultiplierUntil || 0) ? 2 : 1;
+
+      const gain =
+        clickValue *
+        permanentMultiplier *
+        timeBoostMultiplier *
+        starterMultiplier *
+        leaderboardMultiplier;
+
+      profile.totalClicks = (profile.totalClicks || 0) + 1;
 
       profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + gain;
-      await updateUserProfile(user.uid, { accounts: profile.accounts });
+      await updateUserProfile(user.uid, {
+        accounts: profile.accounts,
+        totalClicks: profile.totalClicks
+      });
       bindInvestmentButtons(user.uid);
       await renderHome(user.uid);
     };
@@ -1742,6 +1840,7 @@ async function tickGlobalCryptoMarket(uid) {
 async function initCrypto(user) {
   bindLogout();
   await renderCrypto(user.uid);
+  await renderInvestmentsInsideCrypto(user.uid);
 
   const assetSelect = document.getElementById("assetSelect");
   const buyBtn = document.getElementById("buyBtn");
@@ -1825,7 +1924,9 @@ async function initCrypto(user) {
   }
 
   setInterval(async () => {
+    await applyPassiveIncome(user.uid);
     await tickGlobalCryptoMarket(user.uid);
+    await renderInvestmentsInsideCrypto(user.uid);
   }, 1000);
 }
 
@@ -2637,24 +2738,67 @@ function getUserNetWorth(user) {
   return money + crypto + investmentsValue;
 }
 
+function getCryptoValue(user) {
+  let crypto = 0;
+  Object.values(user.crypto?.assets || {}).forEach(asset => {
+    crypto += (asset.owned || 0) * (asset.price || 0);
+  });
+  return crypto;
+}
+
+function getLeaderboardValue(user, type) {
+  if (type === "wealth") return getUserNetWorth(user);
+  if (type === "clicks") return Number(user.totalClicks || 0);
+  if (type === "passive") return getTotalPassiveIncome(user);
+  if (type === "crypto") return getCryptoValue(user);
+  return 0;
+}
+
+function getLeaderboardTitle(type) {
+  if (type === "wealth") return "Top richesse";
+  if (type === "clicks") return "Top clicks";
+  if (type === "passive") return "Top revenus passifs";
+  if (type === "crypto") return "Top portefeuille crypto";
+  return "Classement";
+}
+
+function formatLeaderboardValue(value, type) {
+  if (type === "clicks") {
+    return Number(value || 0).toLocaleString("fr-FR") + " clicks";
+  }
+
+  if (type === "passive") {
+    return formatMoney(value) + " / sec";
+  }
+
+  return formatMoney(value);
+}
+
 async function renderLeaderboard(uid) {
   const currentProfile = await getUserProfile(uid);
   updateAdminNavVisibility(currentProfile);
 
   const leaderboardList = document.getElementById("leaderboardList");
+  const leaderboardTitle = document.getElementById("leaderboardTitle");
+
   if (!leaderboardList) return;
 
   const users = await getAllUsers();
 
   const ranking = users
+    .filter(u => !u.isAdmin)
     .map(u => ({
       uid: u.uid,
       name: u.displayName || u.username || u.email || "Joueur",
       isCurrentUser: u.uid === uid,
-      worth: getUserNetWorth(u)
+      value: getLeaderboardValue(u, currentLeaderboardType)
     }))
-    .sort((a, b) => b.worth - a.worth)
+    .sort((a, b) => b.value - a.value)
     .slice(0, 20);
+
+  if (leaderboardTitle) {
+    leaderboardTitle.innerText = getLeaderboardTitle(currentLeaderboardType);
+  }
 
   leaderboardList.innerHTML = ranking.map((u, index) => {
     const rank = index + 1;
@@ -2664,45 +2808,77 @@ async function renderLeaderboard(uid) {
       <div class="leaderboard-item ${rank === 1 ? "leaderboard-top1" : ""}">
         <div>
           <div class="leaderboard-rank">${medal} ${escapeHtml(u.name)} ${u.isCurrentUser ? "• Toi" : ""}</div>
-          <div class="small">Richesse totale estimée</div>
+          <div class="small">${getLeaderboardTitle(currentLeaderboardType)}</div>
         </div>
-        <strong>${formatMoney(u.worth)}</strong>
+        <strong>${formatLeaderboardValue(u.value, currentLeaderboardType)}</strong>
       </div>
     `;
   }).join("");
 
-  await rewardTopOne(uid, ranking);
+  await rewardLeaderboardTop(uid, ranking);
 }
 
-async function rewardTopOne(uid, ranking) {
-  if (!ranking.length || ranking[0].uid !== uid) return;
+async function rewardLeaderboardTop(uid, ranking) {
+  if (!ranking.length) return;
+
+  const position = ranking.findIndex(u => u.uid === uid) + 1;
+  if (![1, 2, 3].includes(position)) return;
 
   const profile = await getUserProfile(uid);
   if (!profile) return;
 
   const now = Date.now();
-  const lastReward = profile.lastTopOneReward || 0;
   const interval = 60 * 1000;
+  const lastReward = profile.lastLeaderboardReward || 0;
 
   if (now - lastReward < interval) return;
 
   const activeAccount = profile.activeAccount || "Principal";
   profile.accounts = profile.accounts || { Principal: 0 };
-  profile.history = profile.history || [];
+  profile.history = profile.history || {};
+  profile.shop = profile.shop || {};
 
-  profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + 1000;
-  profile.lastTopOneReward = now;
-  profile.history.unshift("Récompense TOP 1 leaderboard +1 000 €");
+  if (position === 1) {
+    profile.shop.leaderboardClickMultiplierUntil = now + interval;
+    profile.history = Array.isArray(profile.history) ? profile.history : [];
+    profile.history.unshift("Bonus TOP 1 leaderboard : x2 clic pendant 1 min");
+  }
+
+  if (position === 2) {
+    profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + 10000;
+    profile.history = Array.isArray(profile.history) ? profile.history : [];
+    profile.history.unshift("Bonus TOP 2 leaderboard +10 000 €");
+  }
+
+  if (position === 3) {
+    profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + 1000;
+    profile.history = Array.isArray(profile.history) ? profile.history : [];
+    profile.history.unshift("Bonus TOP 3 leaderboard +1 000 €");
+  }
+
+  profile.lastLeaderboardReward = now;
 
   await updateUserProfile(uid, {
     accounts: profile.accounts,
+    shop: profile.shop,
     history: profile.history,
-    lastTopOneReward: profile.lastTopOneReward
+    lastLeaderboardReward: profile.lastLeaderboardReward
   });
 }
 
 async function initLeaderboard(user) {
   bindLogout();
+
+  document.querySelectorAll(".leaderboard-tab").forEach(btn => {
+    btn.onclick = async () => {
+      document.querySelectorAll(".leaderboard-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      currentLeaderboardType = btn.dataset.ranking || "wealth";
+      await renderLeaderboard(user.uid);
+    };
+  });
+
   await renderLeaderboard(user.uid);
 
   setInterval(async () => {
@@ -2784,14 +2960,6 @@ async function applyLootboxReward(profile, reward) {
 
 /* ================= INVESTMENTS PAGE ================= */
 
-function getTotalPassiveIncome(profile) {
-  profile.investments = profile.investments || {};
-
-  return INVESTMENTS.reduce((total, inv) => {
-    const qty = profile.investments[inv.id] || 0;
-    return total + qty * inv.incomePerSecond;
-  }, 0);
-}
 
 async function renderInvestmentsPage(uid) {
   const profile = await getUserProfile(uid);

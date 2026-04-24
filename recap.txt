@@ -4,7 +4,6 @@ rafael-bank/V7/
 ├── boutique.html
 ├── payments.html
 ├── crypto.html
-├── investments.html
 ├── leaderboard.html
 ├── admin.html
 ├── success.html

@@ -245,6 +245,8 @@ async function renderHome(uid) {
   const investmentsList = document.getElementById("investmentsList");
   const homePassiveIncomeText = document.getElementById("homePassiveIncomeText");
 
+  const cardPinSetupHome = document.getElementById("cardPinSetupHome");
+
   if (balanceEl) balanceEl.innerText = formatMoney(balance);
   if (welcomeEl) {
     welcomeEl.innerText = `Bienvenue ${profile.displayName || profile.username} • Compte actif : ${activeAccount}`;
@@ -405,6 +407,10 @@ async function renderHome(uid) {
     }
 
     cardTypeSelect.value = profile.card?.type || "classic";
+  }
+
+  if (cardPinSetupHome) {
+    cardPinSetupHome.style.display = card.pin ? "none" : "block";
   }
 
   if (autoClickToggleBtn) {
@@ -759,6 +765,7 @@ async function initHome(user) {
   const flipCardBtn = document.getElementById("flipCardBtn");
   const toggleCardBlockBtn = document.getElementById("toggleCardBlockBtn");
   const cardTypeSelect = document.getElementById("cardTypeSelect");
+  const saveCardPinBtnHome = document.getElementById("saveCardPinBtnHome");
 
   const autoClickToggleBtn = document.getElementById("autoClickToggleBtn");
   const historyPrevBtn = document.getElementById("historyPrevBtn");
@@ -965,6 +972,31 @@ async function initHome(user) {
       profile.card.revealed = !profile.card.revealed;
       await updateUserProfile(user.uid, { card: profile.card });
       bindInvestmentButtons(user.uid);
+      await renderHome(user.uid);
+    };
+  }
+
+  if (saveCardPinBtnHome) {
+    saveCardPinBtnHome.onclick = async () => {
+      const profile = await getUserProfile(user.uid);
+      const newPin = document.getElementById("newCardPinHome").value.trim();
+
+      if (!/^\d{4}$/.test(newPin)) {
+        return alert("Le PIN doit contenir exactement 4 chiffres.");
+      }
+
+      profile.card = profile.card || {};
+      profile.card.pin = newPin;
+      profile.card.revealed = false;
+      profile.card.blocked = false;
+      profile.card.type = profile.card.type || "classic";
+
+      await updateUserProfile(user.uid, {
+        card: profile.card
+      });
+
+      document.getElementById("newCardPinHome").value = "";
+
       await renderHome(user.uid);
     };
   }

@@ -1,17 +1,21 @@
-rafael-bank/
-├── login.html
+rafael-bank/V7/
+├── index.html
 ├── home.html
-├── cards.html
+├── boutique.html
 ├── payments.html
 ├── crypto.html
+├── investments.html
+├── leaderboard.html
+├── admin.html
+├── success.html
+├── recap.txt
 ├── style.css
+├── auth.js
+├── db.js
+├── firebase.js
+├── session.js
 └── app.js
 
 
 © 2026 Rafael Compagny — Micro-entreprise · Tous droits réservés
 
-localStorage.clear();
-location.reload();
-
-
-npm install firebase 

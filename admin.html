@@ -14,18 +14,6 @@
       <h2>Admin Dashboard</h2>
       <div class="top-actions">
         <button class="btn-link secondary" id="logoutBtn">Se déconnecter</button>
-
-<script type="module">
-  import { logoutUser } from "./auth.js";
-
-  const btn = document.getElementById("logoutBtn");
-  if (btn) {
-    btn.addEventListener("click", async () => {
-      await logoutUser();
-      window.location.href = "login.html";
-    });
-  }
-</script>
       </div>
     </div>
 
@@ -39,9 +27,11 @@
 
     <nav>
         <a href="home.html">Accueil</a>
-        <a href="cards.html">Cartes</a>
+        <a href="boutique.html">Boutique</a>
         <a href="payments.html">Paiement</a>
         <a href="crypto.html">Crypto</a>
+        <a href="investments.html">Investissements</a>
+        <a href="leaderboard.html">Classement</a>
         <a id="adminNavLink" href="admin.html" style="display:none;">Admin</a>
     </nav>
 

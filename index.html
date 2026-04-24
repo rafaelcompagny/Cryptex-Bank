@@ -3,19 +3,142 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rafael Bank</title>
+  <title>Connexion - Rafael Bank</title>
   <link rel="shortcut icon" href="img/logo.jpg">
   <link rel="stylesheet" href="style.css">
 </head>
-
-<body data-page="admin">
-    <div class="container login-wrap">
-        <div class="topbar">
-            <h1>Rafael Bank</h1>
-        </div>
-        <a class="btn-link secondary" href="login.html">
-            Accéder au Jeu
-        </a>
+<body>
+  <div class="container login-wrap">
+    <div class="topbar">
+      <h1>Rafael Bank</h1>
     </div>
+
+    <div class="card">
+      <h2>Connexion</h2>
+
+      <div class="row">
+        <input id="email" type="email" placeholder="Email">
+      </div>
+
+      <div class="row">
+        <input id="password" type="password" placeholder="Mot de passe">
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="registerBtn">Créer un compte</button>
+        <button class="secondary" id="loginBtn">Se connecter</button>
+        <button class="secondary" id="forgotPasswordBtn">Mot de passe oublié</button>
+      </div>
+
+      <p class="small" id="statusMsg"></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { registerUser, loginUser, resetPassword } from "./auth.js";
+    import { createUserProfile } from "./db.js";
+
+    function generateFakeIban() {
+      const randomPart = Array.from({ length: 23 }, () => Math.floor(Math.random() * 10)).join("");
+      return "FR76" + randomPart;
+    }
+
+    function defaultAssets() {
+      return {
+        BTC: { price: 30000, owned: 0, avgBuyPrice: 0, history: [30000, 30120, 30050], transactions: [] },
+        ETH: { price: 2000, owned: 0, avgBuyPrice: 0, history: [2000, 2015, 1998], transactions: [] },
+        AAPL: { price: 180, owned: 0, avgBuyPrice: 0, history: [180, 181, 179], transactions: [] },
+        TSLA: { price: 250, owned: 0, avgBuyPrice: 0, history: [250, 248, 252], transactions: [] },
+        NVDA: { price: 500, owned: 0, avgBuyPrice: 0, history: [500, 506, 503], transactions: [] },
+        RCOP: { price: 5000, owned: 0, avgBuyPrice: 0, history: [5000, 5035, 4990], transactions: [] }
+      };
+    }
+
+    const statusMsg = document.getElementById("statusMsg");
+
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!email || !password) {
+        statusMsg.textContent = "Entre un email et un mot de passe.";
+        return;
+      }
+
+      try {
+        const cred = await registerUser(email, password);
+
+        await createUserProfile(cred.user.uid, {
+          email,
+          username: email.split("@")[0],
+          displayName: email.split("@")[0],
+          iban: generateFakeIban(),
+          isAdmin: false,
+          accounts: {
+            Principal: 0
+          },
+          activeAccount: "Principal",
+          clickValue: 1,
+          clickLevel: 1,
+          history: ["Compte créé avec succès"],
+          loans: [],
+          boost: {
+            doubleMoneyUntil: 0
+          },
+          contacts: [],
+          crypto: {
+            currentAsset: "BTC",
+            randomMode: true,
+            assets: defaultAssets()
+          },
+          card: {
+            blocked: false,
+            revealed: false,
+            type: "classic"
+          }
+        });
+
+        window.location.href = "home.html";
+      } catch (e) {
+        console.error(e);
+        statusMsg.textContent = `${e.code} — ${e.message}`;
+      }
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!email || !password) {
+        statusMsg.textContent = "Entre un email et un mot de passe";
+        return;
+      }
+
+      try {
+        await loginUser(email, password);
+        window.location.href = "home.html";
+      } catch (e) {
+        console.error(e);
+        statusMsg.textContent = `${e.code} — ${e.message}`;
+      }
+    });
+
+    document.getElementById("forgotPasswordBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+
+      if (!email) {
+        statusMsg.textContent = "Entre d'abord ton email.";
+        return;
+      }
+
+      try {
+        await resetPassword(email);
+        statusMsg.textContent = "Email de réinitialisation envoyé.";
+      } catch (e) {
+        console.error("Erreur reset password :", e.code, e.message, e);
+        statusMsg.textContent = `${e.code} — ${e.message}`;
+      }
+    });
+  </script>
 </body>
 </html>

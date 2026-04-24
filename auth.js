@@ -3,7 +3,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 export async function registerUser(email, password) {
@@ -20,4 +21,8 @@ export async function logoutUser() {
 
 export function watchAuth(callback) {
   return onAuthStateChanged(auth, callback);
+}
+
+export async function resetPassword(email) {
+  return await sendPasswordResetEmail(auth, email);
 }

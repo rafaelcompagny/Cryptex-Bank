@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Paiement réussi - Rafael Bank</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container login-wrap">
+    <div class="card">
+      <h1>Paiement réussi ✅</h1>
+      <p id="statusMsg">Activation de ton achat...</p>
+      <button id="goHomeBtn" style="display:none;">Retour à l'accueil</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { watchAuth } from "./auth.js";
+    import { db } from "./firebase.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getUserProfile, updateUserProfile } from "./db.js";
+
+    const statusMsg = document.getElementById("statusMsg");
+    const goHomeBtn = document.getElementById("goHomeBtn");
+
+    const SHOP_REWARDS = {
+      boost_x5_life_real: { type: "permanentMultiplier", value: 5, label: "x5 à vie" },
+      boost_x10_life_real: { type: "permanentMultiplier", value: 10, label: "x10 à vie" },
+      autoclicker_real: { type: "autoclicker", label: "Auto Clicker" },
+      black_pack_real: { type: "blackPack", label: "Pack Black + x2 à vie" },
+      visual_pack_real: { type: "visualPack", label: "Pack Premium Visuel" },
+      starter_pack_real: { type: "starterPack", label: "Pack Débutant" },
+      premium_subscription: { type: "premiumSubscription", label: "Abonnement Premium" },
+
+      money_10k: { type: "money", value: 10000, label: "10 000 € jeu" },
+      money_100k: { type: "money", value: 100000, label: "100 000 € jeu" },
+      money_1m: { type: "money", value: 1000000, label: "1 000 000 € jeu" },
+      money_10m: { type: "money", value: 10000000, label: "10 000 000 € jeu" }
+    };
+
+    async function findPaidSession(uid, itemId, stripeSessionId) {
+      const sessions = await getCheckoutSessions(uid);
+
+      return sessions.find(s => {
+        const sameItem =
+          s.metadata?.itemId === itemId ||
+          s.client_reference_id === itemId;
+
+        const sameStripeSession =
+          !stripeSessionId ||
+          s.sessionId === stripeSessionId ||
+          s.id === stripeSessionId;
+
+        const paid =
+          s.payment_status === "paid" ||
+          s.status === "complete" ||
+          s.status === "paid" ||
+          s.status === "succeeded";
+
+        return sameItem && sameStripeSession && paid;
+      });
+    }
+
+  async function applyReward(uid, itemId) {
+    const reward = SHOP_REWARDS[itemId];
+    if (!reward) {
+      statusMsg.textContent = "Produit inconnu.";
+      return;
+    }
+
+    const profile = await getUserProfile(uid);
+    if (!profile) return;
+
+    profile.accounts = profile.accounts || { Principal: 0 };
+    profile.activeAccount = profile.activeAccount || "Principal";
+    profile.history = profile.history || [];
+    profile.shop = profile.shop || {};
+    profile.card = profile.card || { type: "classic" };
+    profile.paidItems = profile.paidItems || [];
+
+    // 🔒 évite double achat
+    if (profile.paidItems.includes(itemId)) {
+      statusMsg.textContent = "Achat déjà activé.";
+      goHomeBtn.style.display = "inline-block";
+      return;
+    }
+
+    const activeAccount = profile.activeAccount;
+
+    switch (reward.type) {
+      case "money":
+        profile.accounts[activeAccount] += reward.value;
+        break;
+
+      case "permanentMultiplier":
+        profile.shop.permanentMultiplier = Math.max(profile.shop.permanentMultiplier || 1, reward.value);
+        break;
+
+      case "autoclicker":
+        profile.shop.autoClicker = true;
+        profile.shop.autoClickerEnabled = true;
+        break;
+
+      case "blackPack":
+        profile.shop.ownsBlackCard = true;
+        profile.card.type = "black";
+        profile.shop.permanentMultiplier = Math.max(profile.shop.permanentMultiplier || 1, 2);
+        break;
+
+      case "visualPack":
+        profile.shop.visualPack = true;
+        profile.shop.ownsGoldCard = true;
+        profile.shop.ownsBlackCard = true;
+        profile.card.type = "black";
+        break;
+
+      case "starterPack":
+        profile.accounts[activeAccount] += 1000000;
+        profile.shop.starterBoostUntil = Date.now() + (7 * 24 * 60 * 60 * 1000);
+        profile.shop.ownsGoldCard = true;
+        profile.card.type = "premium";
+        break;
+
+      case "premiumSubscription":
+        profile.shop.premiumSubscription = true;
+        profile.shop.shopDiscount = 15;
+        profile.shop.premiumMonthlyMoney = 100000;
+        profile.accounts[activeAccount] += 100000;
+        break;
+    }
+
+    profile.paidItems.push(itemId);
+    profile.history.unshift(`Achat Stripe : ${reward.label}`);
+
+    await updateUserProfile(uid, {
+      accounts: profile.accounts,
+      history: profile.history,
+      shop: profile.shop,
+      card: profile.card,
+      paidItems: profile.paidItems
+    });
+
+    statusMsg.textContent = `Achat activé : ${reward.label}`;
+    goHomeBtn.style.display = "inline-block";
+
+    setTimeout(() => {
+      window.location.href = "home.html";
+    }, 2000);
+  }
+
+    watchAuth(async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const itemId = new URLSearchParams(window.location.search).get("item");
+
+      if (!itemId) {
+        statusMsg.textContent = "Aucun produit détecté.";
+        goHomeBtn.style.display = "inline-block";
+        return;
+      }
+
+      await applyReward(user.uid, itemId);
+    });
+  </script>
+</body>
+</html>

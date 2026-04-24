@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classement - Rafael Bank</title>
+  <link rel="shortcut icon" href="img/logo.jpg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="leaderboard">
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1>Classement global</h1>
+        <p class="small">Les joueurs les plus riches de Rafael Bank</p>
+      </div>
+      <button class="btn-link secondary" id="logoutBtn">Se déconnecter</button>
+    </div>
+
+    <div class="card leaderboard-hero">
+      <h2>Top joueurs</h2>
+      <p class="small">Le TOP 1 reçoit un bonus tant qu’il reste premier.</p>
+      <div id="leaderboardList"></div>
+    </div>
+  </div>
+
+    <div class="container">
+    <div class="card credits-card">
+
+        <h2>🎮 Crédits & Remerciements</h2>
+
+        <div class="credits-grid">
+
+            <div class="credit-item">
+                <h3>👨‍💻 Développement / Directeur du projet</h3>
+                <p><strong>Rafaël GRANERO</strong></p>
+                <p class="small">Développeur · Chef de projet · Et bien plus</p>
+            </div>
+
+            <div class="credit-item">
+                <h3>🎨 Design</h3>
+                <p><strong>Aglaé De Sousa</strong></p>
+                <p class="small">Designeuse · Testeuse</p>
+            </div>
+
+        </div>
+
+        <div class="credits-separator"></div>
+
+        <h3>📱 Projet réel</h3>
+        <p>
+            🔧 <strong>FixiPhone</strong> — 
+            <a href="https://fixit-phone.vercel.app" target="_blank" style="color: white;">Voir le site</a>
+        </p>
+        <p class="small">
+            Rapide · Fiable · Prix compétitifs
+        </p>
+
+        <div class="credits-footer">
+            <p>Hébergement Github et Vercel, avec une Data base Firestore et pout les achats Stripe</p>
+            <p>© 2026 <strong>Rafael Company</strong></p>
+            <p class="small">Micro-entreprise · Tous droits réservés</p>
+        </div>
+
+    </div>
+    </div>
+
+  <nav>
+    <a href="home.html">Accueil</a>
+    <a href="boutique.html">Boutique</a>
+    <a href="payments.html">Paiement</a>
+    <a href="crypto.html">Crypto</a>
+    <a href="investments.html">Investissements</a>
+    <a href="leaderboard.html">Classement</a>
+    <a id="adminNavLink" href="admin.html" style="display:none;">Admin</a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -45,9 +45,9 @@ function getInflationMultiplier(profile) {
     1: 1,
     2: 1.25,
     3: 1.75,
-    4: 2.5,
-    5: 4,
-    6: 7
+    4: 2,
+    5: 2.5,
+    6: 3
   };
 
   return multipliers[level] || 1;
@@ -75,6 +75,7 @@ function getDynamicLoanAmounts(profile) {
 function applyUserTheme(profile) {
   document.body.classList.remove(
     "theme-pink",
+    "theme-purple",
     "theme-gold",
     "theme-red",
     "theme-white"
@@ -82,7 +83,7 @@ function applyUserTheme(profile) {
 
   const theme = profile.shop?.activeTheme;
 
-  if (theme) {
+  if (theme && theme !== "default") {
     document.body.classList.add(`theme-${theme}`);
   }
 }
@@ -2572,6 +2573,17 @@ const SHOP_ITEMS = {
       visual: "10X"
     },
     {
+      id: "theme_default",
+      title: "Thème Original",
+      subtitle: "Revenir au thème bleu classique",
+      priceLabel: "Gratuit",
+      type: "free",
+      rewardType: "theme",
+      rewardValue: "default",
+      badge: "Base",
+      visual: "🔵"
+    },
+    {
       id: "theme_pink_fake",
       title: "Thème Rose",
       subtitle: "Change les couleurs de l’interface",
@@ -2606,6 +2618,18 @@ const SHOP_ITEMS = {
       rewardValue: "red",
       badge: "Skin",
       visual: "🔴"
+    },
+    {
+      id: "theme_purple_fake",
+      title: "Thème Violet",
+      subtitle: "Interface violette premium",
+      priceLabel: "500 000 € (jeu)",
+      type: "fake",
+      fakePrice: 500000,
+      rewardType: "theme",
+      rewardValue: "purple",
+      badge: "Skin",
+      visual: "🟣"
     },
     {
       id: "theme_white_fake",
@@ -2710,10 +2734,24 @@ function buildShopCard(item, variant = "featured", profile = null) {
         return !!profile.shop?.visualPack;
       case "permanentMultiplier":
         return (profile.shop?.permanentMultiplier || 1) >= (item.rewardValue || 1);
+      case "theme":
+        return (
+          item.rewardValue === "default" ||
+          !!profile.shop?.visualPack ||
+          (profile.shop?.ownedThemes || []).includes(item.rewardValue)
+        );
       default:
         return false;
     }
   })();
+
+  const isTheme = item.rewardType === "theme";
+  const isActiveTheme =
+    isTheme &&
+    (
+      (item.rewardValue === "default" && !profile?.shop?.activeTheme) ||
+      profile?.shop?.activeTheme === item.rewardValue
+    );
 
   if (item.id === "starter_pack_real" && profile?.createdAt) {
     const endAt = profile.createdAt + 2 * 24 * 60 * 60 * 1000;
@@ -2746,7 +2784,15 @@ function buildShopCard(item, variant = "featured", profile = null) {
   let buttonHtml = `<button class="buy-shop-item-btn" data-item-id="${escapeHtml(item.id)}">Acheter</button>`;
 
   if (ownsItem) {
-    buttonHtml = `<button disabled>Déjà possédé</button>`;
+    if (isTheme) {
+      buttonHtml = `
+        <button class="buy-shop-item-btn" data-item-id="${escapeHtml(item.id)}">
+          ${isActiveTheme ? "Actif" : "Appliquer"}
+        </button>
+      `;
+    } else {
+      buttonHtml = `<button disabled>Déjà possédé</button>`;
+    }
   }
 
   if (item.rewardType === "dailyGift" && profile) {
@@ -2826,6 +2872,20 @@ async function purchaseShopItem(uid, itemId) {
     if (!visible) {
       showToast("Cette offre n'est plus disponible.");
       return;
+    }
+  }
+
+  if (item.rewardType === "theme") {
+    profile.shop = profile.shop || {};
+    profile.shop.ownedThemes = profile.shop.ownedThemes || ["default"];
+
+    const alreadyOwned =
+      profile.shop.ownedThemes.includes(item.rewardValue) ||
+      profile.shop.visualPack ||
+      item.rewardValue === "default";
+
+    if (alreadyOwned) {
+      item.type = "free";
     }
   }
 
@@ -2934,7 +2994,9 @@ async function purchaseShopItem(uid, itemId) {
       profile.shop.ownsGoldCard = true;
       profile.shop.ownsBlackCard = true;
       profile.shop.permanentMultiplier = Math.max(profile.shop.permanentMultiplier || 1, 2);
+      profile.shop.ownedThemes = ["default", "pink", "purple", "red", "gold", "white"];
       profile.card.type = "black";
+
       profile.history.unshift(`Achat boutique : Pack Premium Visuel`);
       break;
     }
@@ -3010,18 +3072,26 @@ async function purchaseShopItem(uid, itemId) {
 
       profile.history.unshift(`Offre limitée : ${item.title}`);
       break;
-      }
-      case "theme": {
-        profile.shop.ownedThemes = profile.shop.ownedThemes || [];
-        if (!profile.shop.ownedThemes.includes(item.rewardValue)) {
-          profile.shop.ownedThemes.push(item.rewardValue);
-        }
-
-        profile.shop.activeTheme = item.rewardValue;
-        profile.history.unshift(`Thème acheté : ${item.title}`);
-        break;
-      }
     }
+    case "theme": {
+      profile.shop.ownedThemes = profile.shop.ownedThemes || ["default"];
+
+      const alreadyOwned =
+        profile.shop.ownedThemes.includes(item.rewardValue) ||
+        profile.shop.visualPack;
+
+      if (!alreadyOwned && item.rewardValue !== "default") {
+        profile.shop.ownedThemes.push(item.rewardValue);
+        profile.history.unshift(`Thème acheté : ${item.title}`);
+      } else {
+        profile.history.unshift(`Thème appliqué : ${item.title}`);
+      }
+
+      profile.shop.activeTheme = item.rewardValue === "default" ? null : item.rewardValue;
+
+      break;
+    }
+  }
 
   await updateUserProfile(uid, {
     accounts: profile.accounts,
@@ -4405,7 +4475,7 @@ watchAuth(async (user) => {
 
   if (page === "home") await initHome(user);
   if (page === "payments") await initPayments(user);
-  if (page === "cards" || page === "shop") await initShop(user);
+  if (page === "shop") await initShop(user);
   if (page === "crypto") await initCrypto(user);
   if (page === "investments") await initInvestments(user);
   if (page === "leaderboard") await initLeaderboard(user);

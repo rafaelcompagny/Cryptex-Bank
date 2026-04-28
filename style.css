@@ -774,286 +774,6 @@ body.visual-premium .card-back.black {
 }
 
 
-
-
-/* ================= MOBILE RESPONSIVE ================= */
-
-@media (max-width: 768px) {
-  body {
-    overflow-x: hidden;
-  }
-
-  .container {
-    width: 100%;
-    max-width: 100%;
-    padding: 14px;
-    padding-bottom: 110px;
-  }
-
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .top-actions {
-    width: 100%;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  h1 {
-    font-size: 2rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  .card {
-    border-radius: 20px;
-    padding: 16px;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  button,
-  .btn-link,
-  input,
-  select {
-    width: 100%;
-    min-height: 48px;
-    font-size: 1rem;
-  }
-
-  nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 999;
-    display: flex;
-    overflow-x: auto;
-    gap: 8px;
-    padding: 10px;
-    background: rgba(5, 10, 25, 0.92);
-    backdrop-filter: blur(18px);
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-
-  nav a {
-    flex: 0 0 auto;
-    min-width: 92px;
-    text-align: center;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.06);
-    font-size: 0.9rem;
-  }
-
-  .shop-grid,
-  .shop-grid-large,
-  .investment-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .featured-shop-row {
-    grid-auto-columns: 85%;
-  }
-
-  .shop-card,
-  .investment-card {
-    min-height: auto;
-  }
-
-  .shop-card h3 {
-    font-size: 1.55rem;
-  }
-
-  .shop-price {
-    font-size: 1.45rem;
-  }
-
-  .home-card-wrap {
-    align-items: center;
-  }
-
-  .home-card-wrap .card3d,
-  .card3d {
-    width: 100%;
-    max-width: 340px;
-    height: 215px;
-    perspective: 1000px;
-  }
-
-  .home-card-wrap .card-front,
-  .home-card-wrap .card-back,
-  .card-front,
-  .card-back {
-    width: 100%;
-    max-width: 340px;
-    height: 215px;
-  }
-
-  .card-number {
-    font-size: 1.2rem;
-    letter-spacing: 2px;
-  }
-
-  .card-meta {
-    font-size: 0.8rem;
-  }
-
-  .home-card-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  #history,
-  #leaderboardList,
-  #adminUsersList,
-  #cryptoHistory {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .leaderboard-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .leaderboard-rank {
-    font-size: 1.2rem;
-  }
-
-  canvas {
-    max-width: 100%;
-  }
-
-  .credits-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-
-@media (max-width: 420px) {
-  .container {
-    padding: 10px;
-    padding-bottom: 115px;
-  }
-
-  nav a {
-    min-width: 82px;
-    font-size: 0.78rem;
-    padding: 10px;
-  }
-
-  .card {
-    padding: 14px;
-  }
-
-  .shop-title {
-    font-size: 1.8rem;
-  }
-
-  .home-card-wrap .card3d,
-  .card3d {
-    max-width: 300px;
-    height: 190px;
-  }
-
-  .home-card-wrap .card-front,
-  .home-card-wrap .card-back,
-  .card-front,
-  .card-back {
-    max-width: 300px;
-    height: 190px;
-  }
-
-  .card-number {
-    font-size: 1rem;
-  }
-
-  .bank-logo {
-    font-size: 0.8rem;
-  }
-}
-
-
-
-#cardPinSetupHome input {
-  text-align: center;
-  letter-spacing: 4px;
-  font-size: 1.2rem;
-}
-
-
-
-/* ===== MOBILE COMPACT FIX ===== */
-
-@media (max-width: 768px) {
-  button,
-  .btn-link,
-  input,
-  select {
-    min-height: 40px;
-    padding: 9px 12px;
-    font-size: 0.9rem;
-  }
-
-  .row {
-    gap: 8px;
-  }
-
-  .card {
-    padding: 13px;
-  }
-
-  nav {
-    padding: 7px;
-    gap: 6px;
-  }
-
-  nav a {
-    min-width: 76px;
-    padding: 9px 10px;
-    font-size: 0.76rem;
-  }
-
-  .shop-card button,
-  .investment-card button {
-    min-height: 40px;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 420px) {
-  button,
-  .btn-link,
-  input,
-  select {
-    min-height: 38px;
-    padding: 8px 10px;
-    font-size: 0.84rem;
-  }
-
-  nav a {
-    min-width: 68px;
-    font-size: 0.7rem;
-    padding: 8px;
-  }
-}
-
-
-
-
-
 /* ===== MISSIONS ===== */
 
 .mission-grid {
@@ -1175,40 +895,6 @@ nav a small {
   font-weight: 700;
 }
 
-@media (max-width: 768px) {
-  nav a {
-    flex-direction: column;
-    min-width: 64px;
-    padding: 7px 8px;
-    gap: 2px;
-  }
-
-  nav a span {
-    font-size: 1.25rem;
-    line-height: 1;
-  }
-
-  nav a small {
-    font-size: 0.62rem;
-    line-height: 1;
-  }
-
-  button,
-  .btn-link,
-  input,
-  select {
-    min-height: 34px;
-    padding: 7px 10px;
-    font-size: 0.82rem;
-  }
-
-  #clickBtn {
-    min-height: 54px;
-    font-size: 1.1rem;
-    font-weight: 900;
-    border-radius: 18px;
-  }
-}
 
 
 
@@ -1327,115 +1013,7 @@ html, body {
   overflow-x: hidden;
 }
 
-@media (max-width: 768px) {
-  body {
-    zoom: 1;
-    font-size: 14px;
-  }
 
-  .container {
-    padding: 10px;
-    padding-bottom: 95px;
-  }
-
-  .card {
-    padding: 12px;
-    border-radius: 18px;
-  }
-
-  h1 {
-    font-size: 1.65rem;
-  }
-
-  h2 {
-    font-size: 1.28rem;
-  }
-
-  h3 {
-    font-size: 1.08rem;
-  }
-
-  p,
-  .small {
-    font-size: 0.82rem;
-  }
-
-  button,
-  .btn-link,
-  input,
-  select {
-    min-height: 34px;
-    padding: 7px 10px;
-    font-size: 0.78rem;
-    border-radius: 12px;
-  }
-
-  #clickBtn {
-    min-height: 56px;
-    font-size: 1.1rem;
-    font-weight: 900;
-    border-radius: 18px;
-  }
-
-  .row {
-    gap: 7px;
-  }
-
-  nav {
-    padding: 6px;
-  }
-
-  nav a {
-    min-width: 58px;
-    padding: 6px 7px;
-  }
-
-  nav a span {
-    font-size: 1.2rem;
-  }
-
-  nav a small {
-    font-size: 0.58rem;
-  }
-
-  .shop-card,
-  .investment-card,
-  .mission-card {
-    padding: 14px;
-    border-radius: 20px;
-  }
-
-  .shop-card h3 {
-    font-size: 1.35rem;
-  }
-
-  .shop-price {
-    font-size: 1.2rem;
-  }
-}
-
-
-@media (max-width: 768px) {
-  .login-wrap {
-    min-height: auto;
-    padding-top: 20px;
-  }
-
-  .login-wrap .card {
-    margin-bottom: 20px;
-  }
-
-  .login-wrap .row {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  #googleLoginBtn,
-  #forgotPasswordBtn {
-    display: block;
-    width: 100%;
-  }
-}
 
 
 
@@ -1575,4 +1153,331 @@ body.theme-white .shop-hero {
 
 body.theme-white .small {
   color: rgba(10,20,40,0.7);
+}
+
+body.theme-purple {
+  background:
+    radial-gradient(circle at top right, rgba(160, 90, 255, 0.24), transparent 28%),
+    linear-gradient(180deg, #12001e, #06000f);
+}
+
+
+
+/* ================= MOBILE RESPONSIVE ================= */
+
+
+#cardPinSetupHome input {
+  text-align: center;
+  letter-spacing: 4px;
+  font-size: 1.2rem;
+}
+
+
+/* ================= MOBILE CLEAN V2 ================= */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    font-size: 14px;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 14px;
+    padding-bottom: 92px;
+    box-sizing: border-box;
+  }
+
+  .topbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .topbar h1,
+  .topbar h2 {
+    font-size: 1.75rem;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .topbar p {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+  }
+
+  .top-actions {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  #newsBellBtn {
+    width: 48px;
+    min-width: 48px;
+    padding: 0;
+  }
+
+  #logoutBtn {
+    width: 100%;
+  }
+
+  .card,
+  .shop-card,
+  .investment-card,
+  .mission-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: 22px;
+    padding: 16px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .card h2,
+  .card h3 {
+    margin-top: 0;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    width: 100%;
+  }
+
+  button,
+  .btn-link,
+  input,
+  select {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 12px;
+    font-size: 0.9rem;
+    border-radius: 14px;
+    box-sizing: border-box;
+  }
+
+  #clickBtn {
+    min-height: 58px;
+    font-size: 1.25rem;
+    font-weight: 900;
+    border-radius: 20px;
+  }
+
+  #balance {
+    font-size: 2rem;
+    line-height: 1.1;
+    word-break: break-word;
+  }
+
+  .small {
+    font-size: 0.86rem;
+  }
+
+  .shop-grid,
+  .shop-grid-large,
+  .investment-grid,
+  .mission-grid,
+  .credits-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+
+  .featured-shop-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 86%;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+
+  .shop-card h3 {
+    font-size: 1.5rem;
+  }
+
+  .shop-price {
+    font-size: 1.45rem;
+  }
+
+  .leaderboard-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .leaderboard-rank {
+    font-size: 1.1rem;
+  }
+
+  .home-card-wrap {
+    align-items: center;
+  }
+
+  .home-card-wrap .card3d,
+  .card3d {
+    width: 100%;
+    max-width: 320px;
+    height: 200px;
+  }
+
+  .home-card-wrap .card-front,
+  .home-card-wrap .card-back,
+  .card-front,
+  .card-back {
+    width: 100%;
+    max-width: 320px;
+    height: 200px;
+  }
+
+  .card-number {
+    font-size: 1rem;
+    letter-spacing: 1.5px;
+  }
+
+  canvas {
+    max-width: 100%;
+  }
+
+  nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px;
+    background: rgba(8, 12, 30, 0.96);
+    backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  nav a {
+    flex: 0 0 68px;
+    min-width: 68px;
+    height: 58px;
+    padding: 6px 4px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-align: center;
+    font-size: 0;
+    background: rgba(255,255,255,0.06);
+  }
+
+  nav a span {
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  nav a small {
+    display: block;
+    font-size: 0.68rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+}
+
+@media (max-width: 420px) {
+  .container {
+    padding: 10px;
+    padding-bottom: 88px;
+  }
+
+  .topbar h1,
+  .topbar h2 {
+    font-size: 1.55rem;
+  }
+
+  .card,
+  .shop-card,
+  .investment-card,
+  .mission-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  button,
+  .btn-link,
+  input,
+  select {
+    min-height: 38px;
+    font-size: 0.82rem;
+    padding: 8px 10px;
+  }
+
+  #clickBtn {
+    min-height: 54px;
+    font-size: 1.15rem;
+  }
+
+  nav a {
+    flex-basis: 62px;
+    min-width: 62px;
+    height: 54px;
+  }
+
+  nav a span {
+    font-size: 1.22rem;
+  }
+
+  nav a small {
+    font-size: 0.61rem;
+  }
+}
+
+/* ================= LOGIN MOBILE CLEAN ================= */
+
+@media (max-width: 768px) {
+  .login-wrap {
+    min-height: 100vh;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .login-wrap .topbar {
+    margin-bottom: 16px;
+  }
+
+  .login-wrap .card {
+    width: 100%;
+    max-width: 100%;
+    padding: 18px;
+  }
+
+  .login-wrap input {
+    min-height: 46px;
+    font-size: 0.95rem;
+  }
+
+  .login-wrap button {
+    min-height: 42px;
+    font-size: 0.9rem;
+  }
+
+  #googleLoginBtn,
+  #forgotPasswordBtn {
+    display: block;
+    width: 100%;
+  }
 }

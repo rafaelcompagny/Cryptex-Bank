@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Accueil - Rafael Bank</title>
-  <link rel="shortcut icon" href="img/logo.jpg">
+  <title>Accueil - Cryptex Bank</title>
+  <link rel="shortcut icon" href="img/logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="home">
@@ -74,7 +74,7 @@
             <div id="cardInner" class="card-inner">
               <div class="card-front" id="cardFront">
                 <div class="card-chip"></div>
-                <div class="bank-logo">Rafael Bank</div>
+                <div class="bank-logo">Cryptex Bank</div>
 
                 <div class="card-number" id="maskedCardNumber">**** **** **** 4821</div>
 
@@ -84,7 +84,7 @@
                 </div>
 
                 <div class="card-bottom-logos">
-                  <div class="apple-pay-logo"> Pay</div>
+                  <div class="apple-pay-logo"><img href="img/logo.png"> Pay</div>
                   <div class="visa-logo">VISA</div>
                 </div>
               </div>
@@ -144,7 +144,7 @@
   <nav>
     <a href="home.html"><span>🏠</span><small>Accueil</small></a>
     <a href="boutique.html"><span>🛒</span><small>Boutique</small></a>
-    <a href="crypto.html"><span>📈</span><small>Crypto</small></a>
+    <a href="marches.html"><span>📈</span><small>Marchés</small></a>
     <a href="payments.html"><span>💸</span><small>Paiement</small></a>
     <a href="mission.html"><span>🎯</span><small>Missions</small></a>
     <a href="leaderboard.html"><span>🏆</span><small>Top</small></a>
@@ -152,6 +152,13 @@
     <a id="adminNavLink" href="admin.html" style="display:none;"><span>🛡️</span><small>Admin</small></a>
   </nav>
 
+  <div id="offlinePopup" class="offline-popup" style="display:none;">
+    <div class="offline-popup-card">
+      <h2>👋 Heureux de te revoir</h2>
+      <p id="offlinePopupText">Calcul des revenus...</p>
+      <button id="offlinePopupOkBtn">OK</button>
+    </div>
+  </div>
   
   <div id="newsPopup" class="news-popup" style="display:none;">
     <div class="news-popup-content">

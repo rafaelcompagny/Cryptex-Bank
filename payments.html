@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Paiements - Rafael Bank</title>
-  <link rel="shortcut icon" href="img/logo.jpg">
+  <title>Paiements - Cryptex Bank</title>
+  <link rel="shortcut icon" href="img/logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="payments">
@@ -12,7 +12,10 @@
     <div class="topbar">
       <h2>Virements</h2>
       <div class="top-actions">
-        <button id="newsBellBtn" class="secondary">🔔</button>
+        <button id="newsBellBtn" class="secondary news-bell-btn">
+          🔔
+          <span id="newsUnreadDot" class="news-unread-dot" style="display:none;"></span>
+        </button>
         <button class="btn-link secondary" id="logoutBtn">Se déconnecter</button>
       </div>
     </div>
@@ -35,12 +38,12 @@
 
     <div class="row">
       <button onclick="addContact()">Ajouter un contact</button>
-      <button class="secondary" onclick="renderAllUsersAsContacts()">Actualiser comptes Rafael Bank</button>
+      <button class="secondary" onclick="renderAllUsersAsContacts()">Actualiser comptes Cryptex Bank</button>
     </div>
 
     <div id="adminPanel" class="card" style="margin-top:16px; display:none;">
       <h3>Mode admin</h3>
-      <p class="small">Envoi d'argent interne Rafael Bank</p>
+      <p class="small">Envoi d'argent interne Cryptex Bank</p>
       <div class="row">
         <input id="adminTargetUser" type="text" placeholder="Nom du joueur">
         <input id="adminAmount" type="number" min="0" step="0.01" placeholder="Montant">
@@ -55,7 +58,7 @@
   <nav>
     <a href="home.html"><span>🏠</span><small>Accueil</small></a>
     <a href="boutique.html"><span>🛒</span><small>Boutique</small></a>
-    <a href="crypto.html"><span>📈</span><small>Crypto</small></a>
+    <a href="marches.html"><span>📈</span><small>Marchés</small></a>
     <a href="payments.html"><span>💸</span><small>Paiement</small></a>
     <a href="mission.html"><span>🎯</span><small>Missions</small></a>
     <a href="leaderboard.html"><span>🏆</span><small>Top</small></a>

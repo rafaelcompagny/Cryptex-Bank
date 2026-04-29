@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Profil - Rafael Bank</title>
-  <link rel="shortcut icon" href="img/logo.jpg">
+  <title>Profil - Cryptex Bank</title>
+  <link rel="shortcut icon" href="img/logo.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-page="profile">
@@ -16,7 +16,10 @@
       </div>
 
       <div class="top-actions">
-        <button id="newsBellBtn" class="secondary">🔔</button>
+        <button id="newsBellBtn" class="secondary news-bell-btn">
+          🔔
+          <span id="newsUnreadDot" class="news-unread-dot" style="display:none;"></span>
+        </button>
         <button class="btn-link secondary" id="logoutBtn">Se déconnecter</button>
       </div>
     </div>
@@ -30,11 +33,26 @@
       </div>
     </div>
 
+    <div id="profileEditZones">
+      <div class="card" style="margin-top:16px;">
+        <h2>🖼️ Badge de profil</h2>
+        <p class="small">Choisis le badge affiché comme image de profil.</p>
+        <div id="profileBadgeSelector" class="profile-badge-selector"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h2>🏷️ Titre affiché</h2>
+        <p class="small">Choisis le titre visible sur ton profil public.</p>
+        <div id="titleSelector" class="profile-badge-selector"></div>
+      </div>
+    </div>
+
     <div class="card" style="margin-top:16px;">
       <h2>🎖️ Badges débloqués</h2>
       <p class="small" id="badgesCount">0 badge</p>
       <div id="profileBadgesGrid" class="profile-badges-grid"></div>
     </div>
+
   </div>
 
   <div id="newsPopup" class="news-popup" style="display:none;">
@@ -50,7 +68,7 @@
   <nav>
     <a href="home.html"><span>🏠</span><small>Accueil</small></a>
     <a href="boutique.html"><span>🛒</span><small>Boutique</small></a>
-    <a href="crypto.html"><span>📈</span><small>Crypto</small></a>
+    <a href="marches.html"><span>📈</span><small>Marchés</small></a>
     <a href="payments.html"><span>💸</span><small>Paiement</small></a>
     <a href="mission.html"><span>🎯</span><small>Missions</small></a>
     <a href="leaderboard.html"><span>🏆</span><small>Top</small></a>

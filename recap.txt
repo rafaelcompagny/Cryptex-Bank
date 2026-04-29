@@ -1,14 +1,19 @@
-rafael-bank/V7/
+rafael-bank
 ├── img/logo.jpg
 ├── index.html
 ├── home.html
 ├── boutique.html
 ├── payments.html
-├── crypto.html
+├── marches.html
+    ├── Crypto
+    ├── Investissement
+    ├── Immobilier
+    ├── Jeux / Casino
 ├── mission.html
 ├── leaderboard.html
 ├── admin.html
 ├── success.html
+├── profile.html
 ├── recap.txt
 ├── style.css
 ├── auth.js
@@ -16,6 +21,8 @@ rafael-bank/V7/
 ├── firebase.js
 ├── session.js
 └── app.js
+
+Maintenant Cryptex Bank
 
 
 © 2026 Rafael Compagny — Micro-entreprise · Tous droits réservés

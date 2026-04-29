@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Profil public - Cryptex Bank</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="publicProfile">
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1>Profil public</h1>
+        <p class="small">Statistiques du joueur</p>
+      </div>
+    </div>
+
+    <div class="card profile-hero">
+      <div class="profile-avatar" id="publicProfileAvatar">👤</div>
+      <div>
+        <h2 id="publicProfileName">Joueur</h2>
+        <p class="small" id="publicProfileTitle"></p>
+        <p class="small" id="publicProfileStats"></p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h2>🎖️ Badges</h2>
+      <div id="publicBadgesGrid" class="profile-badges-grid"></div>
+    </div>
+  </div>
+
+  <nav>
+    <a href="home.html"><span>🏠</span><small>Accueil</small></a>
+    <a href="leaderboard.html"><span>🏆</span><small>Top</small></a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

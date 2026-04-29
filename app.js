@@ -24,6 +24,7 @@ let currentAdminUid = null;
 let currentLeaderboardType = "wealth";
 const MAX_OFFLINE_PASSIVE_MS = 2 * 60 * 60 * 1000; // 2 heures
 let currentUserUid = null;
+const TAX_INTERVAL_MS = 5 * 60 * 1000;
 
 /* ================= HELPE50RS ================= */
 
@@ -131,7 +132,7 @@ function addXp(profile, amount, reason = "Action", showXpToast = true) {
 
   // ✅ Toast XP (seulement si demandé)
   if (showXpToast) {
-    showToast(`✨ +${amount} XP (${reason})`, "xp");
+    showToast(` +${amount} XP (${reason})`, "xp");
   }
 
   // 🎉 LEVEL UP
@@ -150,9 +151,112 @@ function addXp(profile, amount, reason = "Action", showXpToast = true) {
     );
 
     showToast(
-      `⭐ Niveau ${newLevel} ! +${formatMoney(totalReward)}`,
+      ` Niveau ${newLevel} ! +${formatMoney(totalReward)}`,
       "level"
     );
+  }
+}
+
+
+function applyCasinoMultiplier(profile, multiplier) {
+  profile.shop = profile.shop || {};
+
+  const durationMs = 5 * 60 * 1000;
+  profile.shop.casinoMultiplierValue = multiplier;
+  profile.shop.casinoMultiplierUntil = Date.now() + durationMs;
+
+  profile.history = profile.history || [];
+  profile.history.unshift(`Boost casino x${multiplier} actif pendant 5 min`);
+}
+
+function getCasinoMultiplier(profile) {
+  if (Date.now() < (profile.shop?.casinoMultiplierUntil || 0)) {
+    return profile.shop?.casinoMultiplierValue || 1;
+  }
+
+  return 1;
+}
+
+let blackjackState = null;
+
+const CARD_SUITS = ["♠", "♥", "♦", "♣"];
+const CARD_VALUES = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
+function createDeck() {
+  const deck = [];
+
+  CARD_SUITS.forEach(suit => {
+    CARD_VALUES.forEach(value => {
+      deck.push({ value, suit });
+    });
+  });
+
+  return deck.sort(() => Math.random() - 0.5);
+}
+
+function cardToHtml(card, hidden = false) {
+  if (hidden) {
+    return `<div class="play-card hidden-card">?</div>`;
+  }
+
+  const isRed = card.suit === "♥" || card.suit === "♦";
+
+  return `
+    <div class="play-card ${isRed ? "red" : ""}">
+      ${card.value}${card.suit}
+    </div>
+  `;
+}
+
+function getBlackjackScore(cards) {
+  let score = 0;
+  let aces = 0;
+
+  cards.forEach(card => {
+    if (card.value === "A") {
+      score += 11;
+      aces++;
+    } else if (["J", "Q", "K"].includes(card.value)) {
+      score += 10;
+    } else {
+      score += Number(card.value);
+    }
+  });
+
+  while (score > 21 && aces > 0) {
+    score -= 10;
+    aces--;
+  }
+
+  return score;
+}
+
+function renderBlackjackTable(hideDealer = true) {
+  if (!blackjackState) return;
+
+  const dealerCards = document.getElementById("dealerCards");
+  const playerCards = document.getElementById("playerCards");
+  const dealerScore = document.getElementById("dealerScore");
+  const playerScore = document.getElementById("playerScore");
+
+  if (dealerCards) {
+    dealerCards.innerHTML = blackjackState.dealer
+      .map((card, index) => cardToHtml(card, hideDealer && index === 1))
+      .join("");
+  }
+
+  if (playerCards) {
+    playerCards.innerHTML = blackjackState.player.map(card => cardToHtml(card)).join("");
+  }
+
+  if (dealerScore) {
+    dealerScore.innerText = hideDealer
+      ? `Score : ${getBlackjackScore([blackjackState.dealer[0]])} + ?`
+      : `Score : ${getBlackjackScore(blackjackState.dealer)}`;
+  }
+
+  if (playerScore) {
+    playerScore.innerText = `Score : ${getBlackjackScore(blackjackState.player)}`;
   }
 }
 
@@ -200,6 +304,7 @@ function getRarityLabel(rarity) {
   if (rarity === "rare") return "Rare";
   if (rarity === "epic") return "Épique";
   if (rarity === "legendary") return "Légendaire";
+  if (rarity === "ultra") return "ULTRA Légendaire";
   return "Badge";
 }
 
@@ -430,6 +535,8 @@ async function renderHome(uid) {
       ? (profile.shop?.limitedMultiplierValue || 1)
       : 1;
   const prestigeMultiplier = getPrestigeMultiplier(profile);
+  const casinoMultiplier = getCasinoMultiplier(profile);
+  const eventMultiplier = getGlobalMoneyMultiplier();
 
   const displayedClickValue =
     clickValue *
@@ -438,7 +545,9 @@ async function renderHome(uid) {
     starterMultiplier *
     leaderboardMultiplier *
     limitedMultiplier *
-    prestigeMultiplier;
+    prestigeMultiplier *
+    casinoMultiplier *
+    eventMultiplier;
 
   const autoClickToggleBtn = document.getElementById("autoClickToggleBtn");
   const historyPrevBtn = document.getElementById("historyPrevBtn");
@@ -460,6 +569,7 @@ async function renderHome(uid) {
   const playerXpText = document.getElementById("playerXpText");
   const playerXpBar = document.getElementById("playerXpBar");
 
+
   if (balanceEl) animateNumber(balanceEl, balance);
   if (welcomeEl) {
     welcomeEl.innerText = `Bienvenue ${profile.displayName || profile.username} • Compte actif : ${activeAccount}`;
@@ -474,6 +584,7 @@ async function renderHome(uid) {
     if (starterMultiplier > 1) suffix += " • starter x2";
     if (leaderboardMultiplier > 1) suffix += " • TOP 1 x2";
     if (prestigeMultiplier > 1) suffix += ` • Prestige x${prestigeMultiplier.toFixed(1)}`;
+    if (eventMultiplier > 1) suffix += ` • Event x${eventMultiplier}`;
 
     clickLevelText.innerText = `Gain par clic : ${formatMoney(displayedClickValue)}${suffix}`;
   }
@@ -656,7 +767,7 @@ async function renderHome(uid) {
   }
 
   if (homePassiveIncomeText) {
-    homePassiveIncomeText.innerText = `Revenus passifs : ${formatMoney(getTotalPassiveIncome(profile))} / sec`;
+    homePassiveIncomeText.innerText = `Revenus passifs : ${formatMoney(getTotalPassiveIncome(profile)+getTotalRealEstateIncome(profile))} / sec`;
   }
 
   const inflationMultiplier = getInflationMultiplier(profile);
@@ -966,16 +1077,45 @@ async function buyInvestment(uid, investmentId) {
   await renderHome(uid);
 }
 
-async function applyPassiveIncome(uid) {
+function showOfflineIncomePopup(gain, elapsedMs, wasCapped = false) {
+  return new Promise(resolve => {
+    const popup = document.getElementById("offlinePopup");
+    const text = document.getElementById("offlinePopupText");
+    const okBtn = document.getElementById("offlinePopupOkBtn");
+
+    if (!popup || !text || !okBtn) {
+      resolve();
+      return;
+    }
+
+    const minutes = Math.floor(elapsedMs / 60000);
+    const seconds = Math.floor((elapsedMs % 60000) / 1000);
+
+    text.innerHTML = `
+      Tu as gagné <strong>${formatMoney(gain)}</strong><br>
+      pendant ton absence de ${minutes} min ${seconds} s.
+      ${wasCapped ? "<br><br><span class='small'>Gain limité à 2h maximum.</span>" : ""}
+    `;
+
+    popup.style.display = "flex";
+
+    okBtn.onclick = () => {
+      popup.style.display = "none";
+      resolve();
+    };
+  });
+}
+
+async function applyPassiveIncome(uid, showOfflinePopup = false) {
   const profile = await getUserProfile(uid);
-  if (!profile) return;
-  applyUserTheme(profile);
+  if (!profile) return 0;
 
   const activeAccount = profile.activeAccount || "Principal";
 
   profile.accounts = profile.accounts || { Principal: 0 };
   profile.investments = profile.investments || {};
   profile.history = profile.history || [];
+  profile.realEstate = profile.realEstate || {};
 
   const now = Date.now();
   const last = profile.lastPassiveIncome || now;
@@ -991,35 +1131,48 @@ async function applyPassiveIncome(uid) {
     gain += qty * inv.incomePerSecond * deltaSeconds;
   });
 
+  REAL_ESTATE_PROPERTIES.forEach(property => {
+    const qty = profile.realEstate?.[property.id] || 0;
+    gain += qty * property.incomePerSecond * deltaSeconds;
+  });
+
   profile.lastPassiveIncome = now;
+  gain *= getGlobalMoneyMultiplier();   /* !!!! Durant l'event c'est tout !!!! */
 
-  if (elapsedMs > MAX_OFFLINE_PASSIVE_MS) {
-    profile.history.unshift(
-      `Revenus passifs limités à 2h : +${formatMoney(gain)}`
-    );
+  if (gain > 0) {
+    profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + gain;
+
+    if (elapsedMs > 60 * 1000) {
+      profile.history.unshift(`Revenus passifs hors-ligne : +${formatMoney(gain)}`);
+    }
+
+    if (elapsedMs > MAX_OFFLINE_PASSIVE_MS) {
+      profile.history.unshift(`Revenus passifs limités à 2h maximum`);
+    }
   }
 
-  if (gain <= 0) {
-    await updateUserProfile(uid, {
-      lastPassiveIncome: profile.lastPassiveIncome
-    });
-    return;
-  }
-
-  profile.accounts[activeAccount] += gain;
+  
 
   await updateUserProfile(uid, {
     accounts: profile.accounts,
     lastPassiveIncome: profile.lastPassiveIncome,
-    history: profile.history,
-    badges: profile.badges,
+    history: profile.history
   });
+
+  if (showOfflinePopup && elapsedMs > 60 * 1000 && gain > 0) {
+    await showOfflineIncomePopup(gain, cappedElapsedMs, elapsedMs > MAX_OFFLINE_PASSIVE_MS);
+  }
+
+  return gain;
 }
+
+
 
 async function initHome(user) {
 
   bindNewsPopup(user.uid);
   bindLogout();
+  await applyPassiveIncome(user.uid, true);
   await renderHome(user.uid);
     document.querySelectorAll(".buy-investment-btn").forEach(btn => {
     btn.onclick = async () => {
@@ -1072,6 +1225,8 @@ async function initHome(user) {
       const leaderboardMultiplier =
         Date.now() < (profile.shop?.leaderboardClickMultiplierUntil || 0) ? 2 : 1;
       const prestigeMultiplier = getPrestigeMultiplier(profile);
+      const casinoMultiplier = getCasinoMultiplier(profile);
+      const eventMultiplier = getGlobalMoneyMultiplier();
 
       const gain =
         clickValue *
@@ -1080,7 +1235,9 @@ async function initHome(user) {
         starterMultiplier *
         leaderboardMultiplier *
         limitedMultiplier *
-        prestigeMultiplier;
+        prestigeMultiplier *
+        casinoMultiplier *
+        eventMultiplier;
 
       addXp(profile, 1, "Clic", false);
       showMoneyPop(gain);
@@ -1136,6 +1293,8 @@ async function initHome(user) {
       if (reward.type === "boost") {
         profile.boost.doubleMoneyUntil = Date.now() + reward.durationMs;
       }
+
+      if (eventMultiplier > 1) suffix += ` • Event x${eventMultiplier}`;
 
       if (reward.type === "crypto") {
         if (!profile.crypto.assets[reward.asset]) {
@@ -1413,6 +1572,7 @@ async function initHome(user) {
     await autoLoanPaymentFirebase(user.uid);
     await checkAndClaimMissions(user.uid);
     await renderHome(user.uid);
+    await applyTaxes(user.uid);
     bindInvestmentButtons(user.uid);
   }, 1000);
 }
@@ -1575,7 +1735,7 @@ async function initPayments(user) {
         (beneficiaryName && ((u.displayName || "").toLowerCase() === beneficiaryName.toLowerCase() || (u.username || "").toLowerCase() === beneficiaryName.toLowerCase()))
       );
 
-      if (!target) return showToast("Aucun compte Rafael Bank trouvé.", "error");
+      if (!target) return showToast("Aucun compte Cryptex Bank trouvé.", "error");
       if (target.uid === user.uid) return showToast("Tu ne peux pas t'envoyer de virement à toi-même.", "error");
 
       const receiver = await getUserProfile(target.uid);
@@ -2230,8 +2390,10 @@ async function tickGlobalCryptoMarket(uid) {
 async function initCrypto(user) {
   bindNewsPopup(user.uid);
   bindLogout();
+  bindMarketTabs();
   await renderCrypto(user.uid);
   await renderInvestmentsInsideCrypto(user.uid);
+  await renderRealEstateInsideCrypto(user.uid);
 
   const assetSelect = document.getElementById("assetSelect");
   const buyBtn = document.getElementById("buyBtn");
@@ -2241,6 +2403,21 @@ async function initCrypto(user) {
   const toggleCryptoModeBtn = document.getElementById("toggleCryptoModeBtn");
   const adminAssetSelect = document.getElementById("adminAssetSelect");
   const adminSetCryptoPriceBtn = document.getElementById("adminSetCryptoPriceBtn");
+
+  const betHeadsBtn = document.getElementById("betHeadsBtn");
+  const betTailsBtn = document.getElementById("betTailsBtn");
+
+  if (betHeadsBtn) {
+    betHeadsBtn.onclick = async () => {
+      await playCoinflip(user.uid, "heads");
+    };
+  }
+
+  if (betTailsBtn) {
+    betTailsBtn.onclick = async () => {
+      await playCoinflip(user.uid, "tails");
+    };
+  }
 
   if (assetSelect) {
     assetSelect.onchange = async () => {
@@ -2311,7 +2488,25 @@ async function initCrypto(user) {
       profile.history.unshift(`Prix admin défini pour ${assetKey} : ${newPrice.toFixed(2)} €`);
       await updateUserProfile(user.uid, { history: profile.history, badges: profile.badges, });
 
+      await renderRealEstateInsideCrypto(user.uid);
       await renderCrypto(user.uid);
+    };
+
+    const playSlotBtn = document.getElementById("playSlotBtn");
+
+    if (playSlotBtn) {
+      playSlotBtn.onclick = async () => {
+        await playSlotMachine(user.uid);
+      };
+    }
+  }
+  bindGameInfoModal();
+
+  const slotInfoBtn = document.getElementById("slotInfoBtn");
+
+  if (slotInfoBtn) {
+    slotInfoBtn.onclick = () => {
+      openGameInfo("🎰 Machine à sous — Probabilités", SLOT_PROBABILITIES);
     };
   }
 
@@ -2326,6 +2521,101 @@ async function initCrypto(user) {
 
     await renderInvestmentsInsideCrypto(user.uid);
   }, 1000);
+
+  const openChestBtn = document.getElementById("openChestBtn");
+  const chestInfoBtn = document.getElementById("chestInfoBtn");
+  const spinWheelBtn = document.getElementById("spinWheelBtn");
+  const wheelInfoBtn = document.getElementById("wheelInfoBtn");
+
+  if (openChestBtn) {
+    openChestBtn.onclick = async () => {
+      await playMysteryChest(user.uid);
+    };
+  }
+
+  if (chestInfoBtn) {
+    chestInfoBtn.onclick = () => {
+      openGameInfo("🎁 Coffre mystère — Probabilités", CHEST_PROBABILITIES);
+    };
+  }
+
+  if (spinWheelBtn) {
+    spinWheelBtn.onclick = async () => {
+      await spinFortuneWheel(user.uid);
+    };
+  }
+
+  if (wheelInfoBtn) {
+    wheelInfoBtn.onclick = () => {
+      openGameInfo("🎡 Roue de la fortune — Probabilités", WHEEL_PROBABILITIES);
+    };
+  }
+
+  const playRouletteBtn = document.getElementById("playRouletteBtn");
+  const rouletteInfoBtn = document.getElementById("rouletteInfoBtn");
+  const playDoubleBtn = document.getElementById("playDoubleBtn");
+  const doubleInfoBtn = document.getElementById("doubleInfoBtn");
+
+  if (playRouletteBtn) {
+    playRouletteBtn.onclick = async () => {
+      await playRoulette(user.uid);
+    };
+  }
+
+  if (rouletteInfoBtn) {
+    rouletteInfoBtn.onclick = () => {
+      openGameInfo("🎲 Roulette — Probabilités", ROULETTE_PROBABILITIES);
+    };
+  }
+
+  if (playDoubleBtn) {
+    playDoubleBtn.onclick = async () => {
+      await playDoubleOrNothing(user.uid);
+    };
+  }
+
+  if (doubleInfoBtn) {
+    doubleInfoBtn.onclick = () => {
+      openGameInfo("💣 Double ou rien — Probabilités", DOUBLE_PROBABILITIES);
+    };
+  }
+
+  const startBlackjackBtn = document.getElementById("startBlackjackBtn");
+  const hitBlackjackBtn = document.getElementById("hitBlackjackBtn");
+  const standBlackjackBtn = document.getElementById("standBlackjackBtn");
+  const playPokerBtn = document.getElementById("playPokerBtn");
+  const pokerInfoBtn = document.getElementById("pokerInfoBtn");
+
+  if (startBlackjackBtn) {
+    startBlackjackBtn.onclick = async () => {
+      await startBlackjack(user.uid);
+    };
+  }
+
+  if (hitBlackjackBtn) {
+    hitBlackjackBtn.onclick = async () => {
+      await hitBlackjack(user.uid);
+    };
+  }
+
+  if (standBlackjackBtn) {
+    standBlackjackBtn.onclick = async () => {
+      await standBlackjack(user.uid);
+    };
+  }
+
+  if (playPokerBtn) {
+    playPokerBtn.onclick = async () => {
+      await playPoker(user.uid);
+    };
+  }
+
+  if (pokerInfoBtn) {
+    pokerInfoBtn.onclick = () => {
+      openGameInfo("♠️ Poker IA — Mains possibles", POKER_PROBABILITIES);
+    };
+  }
+
 }
 
 /* ================= ADMIN ================= */
@@ -3010,6 +3300,35 @@ function buildShopCard(item, variant = "featured", profile = null) {
     }
   }
 
+  let priceHtml = `<div class="shop-price">${escapeHtml(item.priceLabel)}</div>`;
+
+  if (item.type === "fake" && item.fakePrice) {
+    const inflation = getInflationMultiplier(profile);
+    const eventDiscount = getShopEventDiscount();
+    const premiumDiscount = profile?.shop?.premiumSubscription ? 15 : 0;
+    const totalDiscount = eventDiscount + premiumDiscount;
+
+    const oldPrice = Math.round(item.fakePrice * inflation);
+    const newPrice = Math.round(oldPrice * (1 - totalDiscount / 100));
+
+    if (totalDiscount > 0) {
+      priceHtml = `
+        <div class="shop-price">
+          <span style="text-decoration:line-through; color:#ff4d6d; opacity:0.85; font-size:0.95rem;">
+            ${formatMoney(oldPrice)}
+          </span>
+          <br>
+          <span style="color:#43e97b;">
+            ${formatMoney(newPrice)}
+          </span>
+        </div>
+        <div class="shop-note">-${totalDiscount}% appliqué</div>
+      `;
+    } else {
+      priceHtml = `<div class="shop-price">${formatMoney(oldPrice)}</div>`;
+    }
+  }
+
   return `
     <div class="${extraClasses}">
       ${ownsItem ? `<div class="shop-owned-badge">Possédé</div>` : ""}
@@ -3017,7 +3336,7 @@ function buildShopCard(item, variant = "featured", profile = null) {
         <div class="shop-badge">${escapeHtml(item.badge || (item.type === "fake" ? "En jeu" : "Premium"))}</div>
         <h3>${escapeHtml(item.title)}</h3>
         ${item.subtitle ? `<div class="shop-subtitle">${escapeHtml(item.subtitle)}</div>` : ""}
-        <div class="shop-price">${escapeHtml(item.priceLabel)}</div>
+        ${priceHtml}
         ${limitedTimerHtml}
         ${
           item.type === "real"
@@ -3090,7 +3409,9 @@ async function purchaseShopItem(uid, itemId) {
     const balance = profile.accounts[activeAccount] || 0;
     const inflation = getInflationMultiplier(profile);
     const baseFakePrice = item.fakePrice || 0;
-    const discountPercent = profile.shop?.premiumSubscription ? 15 : 0;
+    /* const discountPercent = profile.shop?.premiumSubscription ? 15 : 0; */
+    const discountPercent =
+      (profile.shop?.premiumSubscription ? 15 : 0) + getShopEventDiscount();
 
     const finalFakePrice = Math.round(baseFakePrice * inflation * (1 - discountPercent / 100));
 
@@ -3572,6 +3893,7 @@ async function renderLeaderboard(uid) {
   const ranking = users
     .filter(user => !user.isAdmin)
     .map(user => {
+      const selectedBadge = getBadgeById(user.selectedProfileBadge);
       const badgesHtml = (user.badges || [])
         .slice(0, 3)
         .map(id => {
@@ -3586,7 +3908,10 @@ async function renderLeaderboard(uid) {
         name: user.displayName || user.username || user.email || "Joueur",
         isCurrentUser: user.uid === uid,
         value: getLeaderboardValue(user, currentLeaderboardType),
-        badgesHtml
+        badgesHtml,
+        profileBadgeHtml: selectedBadge
+          ? `<span class="lb-profile-badge ${selectedBadge.rarity || "common"}">${selectedBadge.icon}</span>`
+          : ""
       };
     })
     .sort((a, b) => {
@@ -3604,6 +3929,7 @@ async function renderLeaderboard(uid) {
   }
 
   leaderboardList.innerHTML = ranking.map((u, index) => {
+
     const rank = index + 1;
     const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
 
@@ -3611,15 +3937,20 @@ async function renderLeaderboard(uid) {
       <div class="leaderboard-item ${rank === 1 ? "leaderboard-top1" : ""}">
         <div>
           <div class="leaderboard-rank">
-            ${medal} ${escapeHtml(u.name)} ${u.isCurrentUser ? "• Toi" : ""}
+            ${medal} ${u.profileBadgeHtml || ""} ${escapeHtml(u.name)} ${u.isCurrentUser ? "• Toi" : ""}
           </div>
 
+          <div class="small">${escapeHtml(u.rawUser?.activeTitle || "Aucun titre")}</div>
           <div class="lb-badges">${u.badgesHtml}</div>
-
           <div class="small">${getLeaderboardTitle(currentLeaderboardType)}</div>
         </div>
 
-        <strong>${formatLeaderboardValue(u.value, currentLeaderboardType)}</strong>
+        <div>
+          <strong>${formatLeaderboardValue(u.value, currentLeaderboardType)}</strong>
+          <a class="btn-link secondary" style="margin-top:8px; display:inline-flex;" href="profile.html?uid=${u.uid}">
+            Voir profil
+          </a>
+        </div>
       </div>
     `;
   }).join("");
@@ -4061,6 +4392,24 @@ const MISSIONS = [
     check: profile => getTotalPassiveIncome(profile) >= 1000
   },
   {
+    id: "all_investments_once",
+    title: "Portefeuille diversifié",
+    description: "Posséder au moins 1 de chaque investissement et 1 de chaque bien immobilier",
+    reward: 1000000,
+    check: profile => {
+      const hasAllInvestments = INVESTMENTS.every(inv => (profile.investments?.[inv.id] || 0) >= 1);
+      const hasAllRealEstate = REAL_ESTATE_PROPERTIES.every(p => (profile.realEstate?.[p.id] || 0) >= 1);
+      return hasAllInvestments && hasAllRealEstate;
+    }
+  },
+  {
+    id: "first_casino_game",
+    title: "Premier pari",
+    description: "Jouer au casino au moins une fois",
+    reward: 25000,
+    check: profile => (profile.casinoGamesPlayed || 0) >= 1
+  },
+  {
     id: "millionaire",
     title: "Millionnaire",
     description: "Atteindre 1 000 000 € de richesse totale",
@@ -4357,7 +4706,7 @@ async function claimDailyQuest(uid, questId) {
     badges: profile.badges,
   });
 
-  showToast(`✅ Quête terminée : ${quest.title} +${formatMoney(quest.reward)}`, "success");
+  showToast(`Quête terminée : ${quest.title} +${formatMoney(quest.reward)}`, "success");
 }
 
 
@@ -4392,15 +4741,16 @@ async function doPrestige(uid) {
 
   profile.prestige = profile.prestige || {};
   profile.prestige.level = currentLevel + 1;
+  addXp(profile, 1000, "Prestige", true);
   profile.prestige.lastPrestigeAt = Date.now();
 
   profile.accounts = { Principal: 0 };
   profile.activeAccount = "Principal";
   profile.clickValue = 1;
   profile.clickLevel = 1;
-  profile.xp = 0;
   profile.totalClicks = 0;
   profile.investments = {};
+  profile.realEstate = {};
   profile.crypto = {
     currentAsset: "BTC",
     assets: {}
@@ -4409,9 +4759,16 @@ async function doPrestige(uid) {
   profile.boost = { doubleMoneyUntil: 0 };
   profile.history = profile.history || [];
   const prestigeMissionIdsToKeep = ["first_prestige", "prestige_5"];
+ 
+  const missionsToKeepAfterPrestige = [
+    "first_prestige",
+    "prestige_5",
+    "level_10",
+    "level_25"
+  ];
 
   profile.completedMissions = (profile.completedMissions || []).filter(id =>
-    prestigeMissionIdsToKeep.includes(id)
+    missionsToKeepAfterPrestige.includes(id)
   );
 
   profile.dailyQuests = {
@@ -4419,7 +4776,9 @@ async function doPrestige(uid) {
     progress: {},
     claimed: []
   };
-  profile.history.unshift(`Prestige niveau ${profile.prestige.level} atteint`);
+  profile.history.unshift(" Tous les Investissement ont été vendus suite au prestige");
+  profile.history.unshift("🏠 Tous les biens immobiliers ont été vendus suite au prestige");
+  profile.history.unshift(`Prestige niveau ${profile.prestige.level} atteint, + 1 000 Xp`);
 
   await addNewsHistoryItem({
     title: "⭐ Nouveau prestige",
@@ -4436,6 +4795,7 @@ async function doPrestige(uid) {
     clickValue: profile.clickValue,
     clickLevel: profile.clickLevel,
     investments: profile.investments,
+    realEstate: profile.realEstate,
     crypto: profile.crypto,
     loans: profile.loans,
     boost: profile.boost,
@@ -4853,6 +5213,18 @@ const BADGES = [
     icon: "💎",
     rarity: "legendary",
     check: p => getLevelFromXp(p.xp || 0).level >= 25
+  },
+  {
+    id: "ultra_investor",
+    name: "Empire financier",
+    desc: "Posséder 100 de chaque investissement et 100 de chaque bien immobilier",
+    icon: "🌌",
+    rarity: "ultra",
+    check: profile => {
+      const has100Investments = INVESTMENTS.every(inv => (profile.investments?.[inv.id] || 0) >= 100);
+      const has100RealEstate = REAL_ESTATE_PROPERTIES.every(p => (profile.realEstate?.[p.id] || 0) >= 100);
+      return has100Investments && has100RealEstate;
+    }
   }
 ];
 function checkBadges(profile) {
@@ -4915,11 +5287,16 @@ function handleBadges(profile) {
 /* =================== PROFIL ============== */
 
 async function renderProfile(uid) {
-  const profile = await getUserProfile(uid);
+  const params = new URLSearchParams(window.location.search);
+  const viewedUid = params.get("uid") || uid;
+  const isOwnProfile = viewedUid === uid;
+
+  const profile = await getUserProfile(viewedUid);
   if (!profile) return;
 
-  updateAdminNavVisibility(profile);
-  applyUserTheme(profile);
+  const currentProfile = await getUserProfile(uid);
+  updateAdminNavVisibility(await getUserProfile(uid));
+  applyUserTheme(await getUserProfile(uid));
 
   const profileAvatar = document.getElementById("profileAvatar");
   const profileName = document.getElementById("profileName");
@@ -4927,14 +5304,18 @@ async function renderProfile(uid) {
   const profileStats = document.getElementById("profileStats");
   const profileBadgesGrid = document.getElementById("profileBadgesGrid");
   const badgesCount = document.getElementById("badgesCount");
+  const profileBadgeSelector = document.getElementById("profileBadgeSelector");
 
   const levelData = getLevelFromXp(profile.xp || 0);
   const prestigeLevel = profile.prestige?.level || 0;
   const netWorth = getUserNetWorth(profile);
   const unlockedBadges = profile.badges || [];
 
+  const selectedBadge = getBadgeById(profile.selectedProfileBadge);
+
   if (profileAvatar) {
-    profileAvatar.innerText = prestigeLevel > 0 ? "⭐" : "👤";
+    profileAvatar.innerText = selectedBadge ? selectedBadge.icon : (prestigeLevel > 0 ? "⭐" : "👤");
+    profileAvatar.className = `profile-avatar ${selectedBadge?.rarity || ""}`;
   }
 
   if (profileName) {
@@ -4959,6 +5340,67 @@ async function renderProfile(uid) {
       return renderBadgeCard(badge, unlocked);
     }).join("");
   }
+
+  const titleSelector = document.getElementById("titleSelector");
+
+  if (titleSelector) {
+    const unlockedTitles = getUnlockedTitles(profile);
+
+    titleSelector.innerHTML = unlockedTitles.map(title => `
+      <button class="profile-badge-choice ${profile.activeTitle === title.name ? "active" : ""}" data-title="${escapeHtml(title.name)}">
+        <span>🏷️</span>
+        <small>${escapeHtml(title.name)}</small>
+      </button>
+    `).join("");
+
+    document.querySelectorAll(".profile-badge-choice[data-title]").forEach(btn => {
+      btn.onclick = async () => {
+        await updateUserProfile(uid, {
+          activeTitle: btn.dataset.title
+        });
+
+        showToast("Titre modifié", "success");
+        await renderProfile(uid);
+      };
+    });
+  }
+
+  const profileEditZones = document.getElementById("profileEditZones");
+  if (profileEditZones) {
+    profileEditZones.style.display = isOwnProfile ? "block" : "none";
+  }
+
+  if (profileBadgeSelector) {
+    profileBadgeSelector.innerHTML = unlockedBadges.length
+      ? unlockedBadges.map(id => {
+          const badge = getBadgeById(id);
+          if (!badge) return "";
+
+          const active = profile.selectedProfileBadge === id;
+
+          return `
+            <button class="profile-badge-choice ${badge.rarity || "common"} ${active ? "active" : ""}" data-badge-id="${badge.id}">
+              <span>${badge.icon}</span>
+              <small>${escapeHtml(badge.name)}</small>
+            </button>
+          `;
+        }).join("")
+      : `<p class="small">Tu n’as pas encore débloqué de badge.</p>`;
+
+    document.querySelectorAll(".profile-badge-choice").forEach(btn => {
+      btn.onclick = async () => {
+        const badgeId = btn.dataset.badgeId;
+
+        await updateUserProfile(uid, {
+          selectedProfileBadge: badgeId
+        });
+
+        showToast("Badge de profil modifié", "success");
+        await renderProfile(uid);
+      };
+    });
+  }
+
 }
 
 async function initProfile(user) {
@@ -4968,6 +5410,1303 @@ async function initProfile(user) {
     setInterval(async () => {
     await checkUnreadNews(user.uid);
   }, 5000);
+}
+
+/* =================== IMMOBILIER ============== */
+
+const REAL_ESTATE_PROPERTIES = [
+  {
+    id: "studio",
+    name: "Studio étudiant",
+    cost: 150000,
+    incomePerSecond: 80,
+    emoji: "🏠"
+  },
+  {
+    id: "apartment",
+    name: "Appartement T3",
+    cost: 450000,
+    incomePerSecond: 280,
+    emoji: "🏢"
+  },
+  {
+    id: "building",
+    name: "Immeuble locatif",
+    cost: 2500000,
+    incomePerSecond: 1800,
+    emoji: "🏙️"
+  },
+  {
+    id: "hotel",
+    name: "Hôtel",
+    cost: 12000000,
+    incomePerSecond: 9500,
+    emoji: "🏨"
+  },
+  {
+    id: "mall",
+    name: "Centre commercial",
+    cost: 50000000,
+    incomePerSecond: 45000,
+    emoji: "🏬"
+  }
+];
+
+function getTotalRealEstateIncome(profile) {
+  profile.realEstate = profile.realEstate || {};
+
+  return REAL_ESTATE_PROPERTIES.reduce((total, property) => {
+    const qty = profile.realEstate[property.id] || 0;
+    return total + qty * property.incomePerSecond;
+  }, 0);
+}
+
+async function buyRealEstate(uid, propertyId) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const property = REAL_ESTATE_PROPERTIES.find(p => p.id === propertyId);
+  if (!property) return;
+
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.realEstate = profile.realEstate || {};
+  profile.history = profile.history || [];
+
+  const finalCost = Math.round(property.cost * getInflationMultiplier(profile));
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (balance < finalCost) {
+    showToast(`Pas assez d'argent. Prix : ${formatMoney(finalCost)}`, "error");
+    return;
+  }
+
+  profile.accounts[activeAccount] = balance - finalCost;
+  profile.realEstate[property.id] = (profile.realEstate[property.id] || 0) + 1;
+
+  profile.history.unshift(`Bien immobilier acheté : ${property.name} -${formatMoney(finalCost)}`);
+
+  addXp(profile, 75, "Achat immobilier");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => showBadgePopup(b));
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    realEstate: profile.realEstate,
+    history: profile.history,
+    xp: profile.xp,
+    badges: profile.badges
+  });
+
+  showToast(`🏠 Bien acheté : ${property.name}`, "success");
+}
+
+async function renderRealEstateInsideCrypto(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const incomeEl = document.getElementById("realEstateIncomeInfo");
+  const grid = document.getElementById("realEstateShop");
+  if (!incomeEl || !grid) return;
+
+  const activeAccount = profile.activeAccount || "Principal";
+  const balance = profile.accounts?.[activeAccount] || 0;
+
+  incomeEl.innerText = `Revenus immobiliers : ${formatMoney(getTotalRealEstateIncome(profile))} / sec`;
+
+  profile.realEstate = profile.realEstate || {};
+
+  grid.innerHTML = REAL_ESTATE_PROPERTIES.map(property => {
+    const qty = profile.realEstate[property.id] || 0;
+    const finalCost = Math.round(property.cost * getInflationMultiplier(profile));
+    const canBuy = balance >= finalCost;
+
+    return `
+      <div class="investment-card">
+        ${qty > 0 ? `<div class="investment-owned">x${qty}</div>` : ""}
+
+        <div>
+          <div class="investment-emoji">${property.emoji}</div>
+          <h3>${escapeHtml(property.name)}</h3>
+          <p class="small">Génère un loyer automatiquement.</p>
+
+          <div class="investment-stats">
+            <div class="investment-stat">Prix : <strong>${formatMoney(finalCost)}</strong></div>
+            <div class="investment-stat">Loyer : <strong>${formatMoney(property.incomePerSecond)} / sec</strong></div>
+            <div class="investment-stat">Revenu actuel : <strong>${formatMoney(qty * property.incomePerSecond)} / sec</strong></div>
+          </div>
+        </div>
+
+        <button class="buy-realestate-btn" data-property-id="${property.id}" ${canBuy ? "" : "disabled"}>
+          ${canBuy ? "Acheter" : "Pas assez d'argent"}
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  document.querySelectorAll(".buy-realestate-btn").forEach(btn => {
+    btn.onclick = async () => {
+      await buyRealEstate(uid, btn.dataset.propertyId);
+      await renderRealEstateInsideCrypto(uid);
+      await renderCrypto(uid);
+    };
+  });
+}
+
+function bindMarketTabs() {
+  const tabs = document.querySelectorAll(".market-tab");
+  const sections = {
+    crypto: document.getElementById("cryptoMarketSection"),
+    investments: document.getElementById("investmentsMarketSection"),
+    realestate: document.getElementById("realEstateMarketSection"),
+    games: document.getElementById("gamesMarketSection")
+  };
+
+  tabs.forEach(tab => {
+    tab.onclick = () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+
+      Object.values(sections).forEach(section => {
+        if (section) section.classList.remove("active");
+      });
+
+      const selected = tab.dataset.marketTab;
+      if (sections[selected]) {
+        sections[selected].classList.add("active");
+      }
+    };
+  });
+}
+
+/* =================== JEUX =============== */
+
+async function playCoinflip(uid, choice) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const input = document.getElementById("coinflipBet");
+  const resultEl = document.getElementById("coinflipResult");
+
+  const bet = Number(input?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) {
+    showToast("Mise invalide", "error");
+    return;
+  }
+
+  if (balance < bet) {
+    showToast("Pas assez d'argent", "error");
+    return;
+  }
+
+  const result = Math.random() < 0.5 ? "heads" : "tails";
+  const win = result === choice;
+
+  if (win) {
+    profile.accounts[activeAccount] = balance + bet;
+    profile.history.unshift(`Casino : Pile ou Face gagné +${formatMoney(bet)}`);
+    if (resultEl) resultEl.innerText = `✅ Gagné ! Résultat : ${result === "heads" ? "Pile" : "Face"} • +${formatMoney(bet)}`;
+    showToast(`🎰 Gagné +${formatMoney(bet)}`, "success");
+  } else {
+    profile.accounts[activeAccount] = balance - bet;
+    profile.history.unshift(`Casino : Pile ou Face perdu -${formatMoney(bet)}`);
+    if (resultEl) resultEl.innerText = `❌ Perdu ! Résultat : ${result === "heads" ? "Pile" : "Face"} • -${formatMoney(bet)}`;
+    showToast(`🎰 Perdu -${formatMoney(bet)}`, "warning");
+  }
+  
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+
+  addXp(profile, 10, "Casino");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed,
+  });
+
+  await renderCrypto(uid);
+}
+
+const SLOT_SYMBOLS = ["🍒", "💎", "⭐", "💰", "👑", "7️⃣"];
+
+function getSlotReward(reels, bet) {
+  const [a, b, c] = reels;
+
+  if (a === "7️⃣" && b === "7️⃣" && c === "7️⃣") {
+    return {
+      type: "money",
+      amount: bet * 100,
+      label: `JACKPOT x100 : +${formatMoney(bet * 100)}`,
+      jackpot: true
+    };
+  }
+
+  if (a === "👑" && b === "👑" && c === "👑") {
+    return {
+      type: "boost",
+      multiplier: 10,
+      label: "Boost x10 pendant 5 min",
+      jackpot: true
+    };
+  }
+
+  if (a === "💰" && b === "💰" && c === "💰") {
+    return {
+      type: "money",
+      amount: bet * 25,
+      label: `x25 : +${formatMoney(bet * 25)}`
+    };
+  }
+
+  if (a === "⭐" && b === "⭐" && c === "⭐") {
+    return {
+      type: "boost",
+      multiplier: 5,
+      label: "Boost x5 pendant 5 min"
+    };
+  }
+
+  if (a === "💎" && b === "💎" && c === "💎") {
+    return {
+      type: "money",
+      amount: bet * 5,
+      label: `x5 : +${formatMoney(bet * 5)}`
+    };
+  }
+
+  if (a === "🍒" && b === "🍒" && c === "🍒") {
+    return {
+      type: "money",
+      amount: bet * 2,
+      label: `x2 : +${formatMoney(bet * 2)}`
+    };
+  }
+
+  if (a === b || b === c || a === c) {
+    return {
+      type: "money",
+      amount: Math.round(bet * 0.5),
+      label: `Petite paire : +${formatMoney(Math.round(bet * 0.5))}`
+      };
+  }
+
+  return {
+    type: "lose",
+    amount: 0,
+    label: `Perdu : -${formatMoney(bet)}`
+  };
+}
+
+function animateSlotReels(finalReels) {
+  return new Promise(resolve => {
+    const reelsEls = [
+      document.getElementById("slotReel1"),
+      document.getElementById("slotReel2"),
+      document.getElementById("slotReel3")
+    ];
+
+    reelsEls.forEach(el => {
+      if (!el) return;
+      el.classList.add("spinning");
+    });
+
+    const interval = setInterval(() => {
+      reelsEls.forEach(el => {
+        if (!el) return;
+        el.innerText = SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+      });
+    }, 90);
+
+    setTimeout(() => {
+      clearInterval(interval);
+
+      reelsEls.forEach((el, index) => {
+        if (!el) return;
+        el.classList.remove("spinning");
+        el.innerText = finalReels[index];
+      });
+
+      resolve();
+    }, 1600);
+  });
+}
+
+async function playSlotMachine(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const betInput = document.getElementById("slotBet");
+  const resultEl = document.getElementById("slotResult");
+  const slotCard = document.querySelector(".slot-machine-card");
+
+  const bet = Number(betInput?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+  profile.shop = profile.shop || {};
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) {
+    showToast("Mise invalide", "error");
+    return;
+  }
+
+  if (balance < bet) {
+    showToast("Pas assez d'argent", "error");
+    return;
+  }
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  const finalReels = [
+    SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
+    SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
+    SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]
+  ];
+
+  if (resultEl) resultEl.innerText = "La machine tourne...";
+  slotCard?.classList.remove("jackpot");
+
+  await animateSlotReels(finalReels);
+
+  const reward = getSlotReward(finalReels, bet);
+
+  if (reward.type === "money") {
+    profile.accounts[activeAccount] += reward.amount;
+    profile.history.unshift(`Machine à sous : ${reward.label}`);
+    showToast(`🎰 ${reward.label}`, reward.jackpot ? "level" : "success");
+  }
+
+  if (reward.type === "boost") {
+    applyCasinoMultiplier(profile, reward.multiplier);
+    profile.history.unshift(`Machine à sous : ${reward.label}`);
+    showToast(`🎰 ${reward.label}`, reward.jackpot ? "level" : "success");
+  }
+
+  if (reward.type === "lose") {
+    profile.history.unshift(`Machine à sous : ${reward.label}`);
+    showToast(`🎰 ${reward.label}`, "warning");
+  }
+
+  if (reward.jackpot) {
+    slotCard?.classList.add("jackpot");
+  }
+
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+
+  addXp(profile, 15, "Machine à sous");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    shop: profile.shop,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  if (resultEl) resultEl.innerText = reward.label;
+
+  await renderCrypto(uid);
+}
+
+const SLOT_PROBABILITIES = [
+  { label: "7️⃣ 7️⃣ 7️⃣", reward: "Jackpot x100", chance: "≈ 0,46%" },
+  { label: "👑 👑 👑", reward: "Boost x10 pendant 5 min", chance: "≈ 0,46%" },
+  { label: "💰 💰 💰", reward: "x25", chance: "≈ 0,46%" },
+  { label: "⭐ ⭐ ⭐", reward: "Boost x5 pendant 5 min", chance: "≈ 0,46%" },
+  { label: "💎 💎 💎", reward: "x5", chance: "≈ 0,46%" },
+  { label: "🍒 🍒 🍒", reward: "x2", chance: "≈ 0,46%" },
+  { label: "2 symboles identiques", reward: "Remboursement 50%", chance: "≈ 34,7%" },
+  { label: "Aucune combinaison", reward: "Perdu", chance: "≈ 62,5%" }
+];
+
+function openGameInfo(title, rows) {
+  const modal = document.getElementById("gameInfoModal");
+  const titleEl = document.getElementById("gameInfoTitle");
+  const content = document.getElementById("gameInfoContent");
+
+  if (!modal || !titleEl || !content) return;
+
+  titleEl.innerText = title;
+
+  content.innerHTML = rows.map(row => `
+    <div class="lootbox-info-row">
+      <span>${escapeHtml(row.label)}</span>
+      <span>${escapeHtml(row.reward)}</span>
+      <strong>${escapeHtml(row.chance)}</strong>
+    </div>
+  `).join("");
+
+  modal.style.display = "flex";
+}
+
+function bindGameInfoModal() {
+  const closeBtn = document.getElementById("closeGameInfoBtn");
+  const modal = document.getElementById("gameInfoModal");
+
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      if (modal) modal.style.display = "none";
+    };
+  }
+
+  if (modal) {
+    modal.onclick = e => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    };
+  }
+}
+
+const CHEST_REWARDS = [
+  { chance: 40, type: "money", multiplier: 1.5, label: "x1,5 de la mise" },
+  { chance: 25, type: "money", multiplier: 3, label: "x3 de la mise" },
+  { chance: 15, type: "boost", multiplier: 2, label: "Boost x2 pendant 5 min" },
+  { chance: 10, type: "money", multiplier: 8, label: "x8 de la mise" },
+  { chance: 7, type: "boost", multiplier: 5, label: "Boost x5 pendant 5 min" },
+  { chance: 3, type: "money", multiplier: 50, label: "Jackpot x50" }
+];
+
+const WHEEL_REWARDS = [
+  { chance: 30, type: "lose", label: "Perdu" },
+  { chance: 25, type: "money", multiplier: 2, label: "x2" },
+  { chance: 18, type: "money", multiplier: 4, label: "x4" },
+  { chance: 12, type: "boost", multiplier: 2, label: "Boost x2 pendant 5 min" },
+  { chance: 8, type: "money", multiplier: 10, label: "x10" },
+  { chance: 5, type: "boost", multiplier: 5, label: "Boost x5 pendant 5 min" },
+  { chance: 2, type: "money", multiplier: 100, label: "Jackpot x100" }
+];
+
+const CHEST_PROBABILITIES = CHEST_REWARDS.map(r => ({
+  label: r.label,
+  reward: r.type === "boost" ? `x${r.multiplier} clics` : "Argent",
+  chance: `${r.chance}%`
+}));
+
+const WHEEL_PROBABILITIES = WHEEL_REWARDS.map(r => ({
+  label: r.label,
+  reward: r.type === "boost" ? `x${r.multiplier} clics` : r.type === "lose" ? "Perte" : "Argent",
+  chance: `${r.chance}%`
+}));
+
+function drawReward(table) {
+  const rand = Math.random() * 100;
+  let total = 0;
+
+  for (const reward of table) {
+    total += reward.chance;
+    if (rand <= total) return reward;
+  }
+
+  return table[0];
+}
+
+function isJackpotReward(reward) {
+  return reward.multiplier >= 50 || reward.label.toLowerCase().includes("jackpot");
+}
+
+async function playMysteryChest(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const input = document.getElementById("chestBet");
+  const resultEl = document.getElementById("chestResult");
+  const chestEl = document.getElementById("chestAnimation");
+
+  const bet = Number(input?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+  profile.shop = profile.shop || {};
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) {
+    showToast("Prix du coffre invalide", "error");
+    return;
+  }
+
+  if (balance < bet) {
+    showToast("Pas assez d'argent", "error");
+    return;
+  }
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  if (resultEl) resultEl.innerText = "Ouverture du coffre...";
+  if (chestEl) {
+    chestEl.classList.add("opening");
+    chestEl.innerText = "🎁";
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 1200));
+
+  const reward = drawReward(CHEST_REWARDS);
+
+  if (reward.type === "money") {
+    const amount = Math.round(bet * reward.multiplier);
+    profile.accounts[activeAccount] += amount;
+    profile.history.unshift(`Coffre mystère : ${reward.label} +${formatMoney(amount)}`);
+    if (resultEl) resultEl.innerText = `${reward.label} : +${formatMoney(amount)}`;
+    showToast(`🎁 ${reward.label} +${formatMoney(amount)}`, isJackpotReward(reward) ? "level" : "success");
+  }
+
+  if (reward.type === "boost") {
+    applyCasinoMultiplier(profile, reward.multiplier);
+    profile.history.unshift(`Coffre mystère : ${reward.label}`);
+    if (resultEl) resultEl.innerText = reward.label;
+    showToast(`🎁 ${reward.label}`, isJackpotReward(reward) ? "level" : "success");
+  }
+
+  if (chestEl) {
+    chestEl.innerText = isJackpotReward(reward) ? "🌟" : "✨";
+    setTimeout(() => chestEl.classList.remove("opening"), 800);
+  }
+
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+  addXp(profile, 15, "Coffre mystère");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    shop: profile.shop,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  await renderCrypto(uid);
+}
+
+async function spinFortuneWheel(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const input = document.getElementById("wheelBet");
+  const resultEl = document.getElementById("wheelResult");
+  const wheelEl = document.getElementById("fortuneWheel");
+
+  const bet = Number(input?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+  profile.shop = profile.shop || {};
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) {
+    showToast("Mise invalide", "error");
+    return;
+  }
+
+  if (balance < bet) {
+    showToast("Pas assez d'argent", "error");
+    return;
+  }
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  if (resultEl) resultEl.innerText = "La roue tourne...";
+  if (wheelEl) {
+    wheelEl.classList.remove("spinning");
+    void wheelEl.offsetWidth;
+    wheelEl.classList.add("spinning");
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 1800));
+
+  const reward = drawReward(WHEEL_REWARDS);
+
+  if (reward.type === "money") {
+    const amount = Math.round(bet * reward.multiplier);
+    profile.accounts[activeAccount] += amount;
+    profile.history.unshift(`Roue de la fortune : ${reward.label} +${formatMoney(amount)}`);
+    if (resultEl) resultEl.innerText = `${reward.label} : +${formatMoney(amount)}`;
+    showToast(`🎡 ${reward.label} +${formatMoney(amount)}`, isJackpotReward(reward) ? "level" : "success");
+  }
+
+  if (reward.type === "boost") {
+    applyCasinoMultiplier(profile, reward.multiplier);
+    profile.history.unshift(`Roue de la fortune : ${reward.label}`);
+    if (resultEl) resultEl.innerText = reward.label;
+    showToast(`🎡 ${reward.label}`, "success");
+  }
+
+  if (reward.type === "lose") {
+    profile.history.unshift(`Roue de la fortune : perdu -${formatMoney(bet)}`);
+    if (resultEl) resultEl.innerText = `Perdu : -${formatMoney(bet)}`;
+    showToast(`🎡 Perdu -${formatMoney(bet)}`, "warning");
+  }
+
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+  addXp(profile, 15, "Roue de la fortune");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    shop: profile.shop,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  await renderCrypto(uid);
+}
+
+const ROULETTE_PROBABILITIES = [
+  { label: "Rouge", reward: "x2", chance: "≈ 48,6%" },
+  { label: "Noir", reward: "x2", chance: "≈ 48,6%" },
+  { label: "Pair", reward: "x2", chance: "≈ 48,6%" },
+  { label: "Impair", reward: "x2", chance: "≈ 48,6%" },
+  { label: "0", reward: "Perte automatique", chance: "≈ 2,7%" }
+];
+
+const DOUBLE_PROBABILITIES = [
+  { label: "Victoire", reward: "x2", chance: "50%" },
+  { label: "Défaite", reward: "Perte", chance: "50%" }
+];
+
+async function playRoulette(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const betInput = document.getElementById("rouletteBet");
+  const choiceInput = document.getElementById("rouletteChoice");
+  const wheelEl = document.getElementById("rouletteWheel");
+  const resultEl = document.getElementById("rouletteResult");
+
+  const bet = Number(betInput?.value || 0);
+  const choice = choiceInput?.value || "red";
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) return showToast("Mise invalide", "error");
+  if (balance < bet) return showToast("Pas assez d'argent", "error");
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  if (resultEl) resultEl.innerText = "La roulette tourne...";
+  if (wheelEl) {
+    wheelEl.classList.remove("spinning");
+    void wheelEl.offsetWidth;
+    wheelEl.classList.add("spinning");
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 1400));
+
+  const number = Math.floor(Math.random() * 37);
+  const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+
+  const color = number === 0 ? "green" : redNumbers.includes(number) ? "red" : "black";
+  const parity = number === 0 ? "zero" : number % 2 === 0 ? "even" : "odd";
+
+  const win =
+    (choice === "red" && color === "red") ||
+    (choice === "black" && color === "black") ||
+    (choice === "even" && parity === "even") ||
+    (choice === "odd" && parity === "odd");
+
+  if (win) {
+    const amount = bet * 2;
+    profile.accounts[activeAccount] += amount;
+    profile.history.unshift(`Roulette : gagné +${formatMoney(bet)} • numéro ${number}`);
+    if (resultEl) resultEl.innerText = `✅ Numéro ${number} • Gagné +${formatMoney(bet)}`;
+    showToast(`🎲 Roulette gagnée +${formatMoney(bet)}`, "success");
+  } else {
+    profile.history.unshift(`Roulette : perdu -${formatMoney(bet)} • numéro ${number}`);
+    if (resultEl) resultEl.innerText = `❌ Numéro ${number} • Perdu -${formatMoney(bet)}`;
+    showToast(`🎲 Roulette perdue -${formatMoney(bet)}`, "warning");
+  }
+
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+  addXp(profile, 15, "Roulette");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  await renderCrypto(uid);
+}
+
+async function playDoubleOrNothing(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const betInput = document.getElementById("doubleBet");
+  const boxEl = document.getElementById("doubleBox");
+  const resultEl = document.getElementById("doubleResult");
+
+  const bet = Number(betInput?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) return showToast("Mise invalide", "error");
+  if (balance < bet) return showToast("Pas assez d'argent", "error");
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  if (resultEl) resultEl.innerText = "Suspense...";
+  if (boxEl) {
+    boxEl.classList.add("playing");
+    boxEl.innerText = "💣";
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 1200));
+
+  const win = Math.random() < 0.5;
+
+  if (win) {
+    const amount = bet * 2;
+    profile.accounts[activeAccount] += amount;
+    profile.history.unshift(`Double ou rien : gagné +${formatMoney(bet)}`);
+    if (resultEl) resultEl.innerText = `✅ Gagné +${formatMoney(bet)}`;
+    if (boxEl) boxEl.innerText = "💰";
+    showToast(`💣 Double réussi +${formatMoney(bet)}`, "success");
+  } else {
+    profile.history.unshift(`Double ou rien : perdu -${formatMoney(bet)}`);
+    if (resultEl) resultEl.innerText = `❌ Perdu -${formatMoney(bet)}`;
+    if (boxEl) boxEl.innerText = "💥";
+    showToast(`💣 Perdu -${formatMoney(bet)}`, "warning");
+  }
+
+  if (boxEl) boxEl.classList.remove("playing");
+
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+  addXp(profile, 15, "Double ou rien");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  await renderCrypto(uid);
+}
+
+async function startBlackjack(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const betInput = document.getElementById("blackjackBet");
+  const resultEl = document.getElementById("blackjackResult");
+  const hitBtn = document.getElementById("hitBlackjackBtn");
+  const standBtn = document.getElementById("standBlackjackBtn");
+
+  const bet = Number(betInput?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) return showToast("Mise invalide", "error");
+  if (balance < bet) return showToast("Pas assez d'argent", "error");
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts
+  });
+
+  const deck = createDeck();
+
+  blackjackState = {
+    deck,
+    bet,
+    player: [deck.pop(), deck.pop()],
+    dealer: [deck.pop(), deck.pop()]
+  };
+
+  if (resultEl) resultEl.innerText = "Partie en cours...";
+  if (hitBtn) hitBtn.disabled = false;
+  if (standBtn) standBtn.disabled = false;
+
+  renderBlackjackTable(true);
+
+  if (getBlackjackScore(blackjackState.player) === 21) {
+    await finishBlackjack(uid, "blackjack");
+  }
+}
+
+async function hitBlackjack(uid) {
+  if (!blackjackState) return;
+
+  blackjackState.player.push(blackjackState.deck.pop());
+  renderBlackjackTable(true);
+
+  const score = getBlackjackScore(blackjackState.player);
+
+  if (score > 21) {
+    await finishBlackjack(uid, "lose");
+  }
+}
+
+async function standBlackjack(uid) {
+  if (!blackjackState) return;
+
+  while (getBlackjackScore(blackjackState.dealer) < 17) {
+    blackjackState.dealer.push(blackjackState.deck.pop());
+  }
+
+  const playerScore = getBlackjackScore(blackjackState.player);
+  const dealerScore = getBlackjackScore(blackjackState.dealer);
+
+  if (dealerScore > 21 || playerScore > dealerScore) {
+    await finishBlackjack(uid, "win");
+  } else if (playerScore === dealerScore) {
+    await finishBlackjack(uid, "draw");
+  } else {
+    await finishBlackjack(uid, "lose");
+  }
+}
+
+async function finishBlackjack(uid, result) {
+  const profile = await getUserProfile(uid);
+  if (!profile || !blackjackState) return;
+
+  const resultEl = document.getElementById("blackjackResult");
+  const hitBtn = document.getElementById("hitBlackjackBtn");
+  const standBtn = document.getElementById("standBlackjackBtn");
+
+  const activeAccount = profile.activeAccount || "Principal";
+  const bet = blackjackState.bet;
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+
+  let message = "";
+  let toastType = "info";
+
+  if (result === "blackjack") {
+    const amount = Math.round(bet * 2.5);
+    profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + amount;
+    message = `Blackjack ! +${formatMoney(amount - bet)}`;
+    toastType = "level";
+  }
+
+  if (result === "win") {
+    const amount = bet * 2;
+    profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + amount;
+    message = `Victoire Blackjack +${formatMoney(bet)}`;
+    toastType = "success";
+  }
+
+  if (result === "draw") {
+    profile.accounts[activeAccount] = (profile.accounts[activeAccount] || 0) + bet;
+    message = "Égalité, mise remboursée";
+    toastType = "info";
+  }
+
+  if (result === "lose") {
+    message = `Défaite Blackjack -${formatMoney(bet)}`;
+    toastType = "warning";
+  }
+
+  profile.history.unshift(message);
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+
+  addXp(profile, 20, "Blackjack");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  renderBlackjackTable(false);
+
+  if (resultEl) resultEl.innerText = message;
+  if (hitBtn) hitBtn.disabled = true;
+  if (standBtn) standBtn.disabled = true;
+
+  showToast(`🃏 ${message}`, toastType);
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  blackjackState = null;
+  await renderCrypto(uid);
+}
+
+function getPokerCardValue(card) {
+  const order = {
+    "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7,
+    "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "A": 14
+  };
+
+  return order[card.value];
+}
+
+function evaluatePokerHand(cards) {
+  const values = cards.map(getPokerCardValue).sort((a, b) => b - a);
+  const suits = cards.map(c => c.suit);
+
+  const counts = {};
+  values.forEach(v => counts[v] = (counts[v] || 0) + 1);
+
+  const countValues = Object.values(counts).sort((a, b) => b - a);
+  const isFlush = suits.every(s => s === suits[0]);
+
+  const unique = [...new Set(values)].sort((a, b) => b - a);
+  const isStraight =
+    unique.length === 5 &&
+    unique[0] - unique[4] === 4;
+
+  let rank = 1;
+  let label = "Carte haute";
+
+  if (isStraight && isFlush) {
+    rank = 9;
+    label = "Quinte flush";
+  } else if (countValues[0] === 4) {
+    rank = 8;
+    label = "Carré";
+  } else if (countValues[0] === 3 && countValues[1] === 2) {
+    rank = 7;
+    label = "Full";
+  } else if (isFlush) {
+    rank = 6;
+    label = "Couleur";
+  } else if (isStraight) {
+    rank = 5;
+    label = "Suite";
+  } else if (countValues[0] === 3) {
+    rank = 4;
+    label = "Brelan";
+  } else if (countValues[0] === 2 && countValues[1] === 2) {
+    rank = 3;
+    label = "Double paire";
+  } else if (countValues[0] === 2) {
+    rank = 2;
+    label = "Paire";
+  }
+
+  return {
+    rank,
+    label,
+    highCards: values
+  };
+}
+
+function comparePokerHands(a, b) {
+  const handA = evaluatePokerHand(a);
+  const handB = evaluatePokerHand(b);
+
+  if (handA.rank !== handB.rank) {
+    return handA.rank - handB.rank;
+  }
+
+  for (let i = 0; i < handA.highCards.length; i++) {
+    if (handA.highCards[i] !== handB.highCards[i]) {
+      return handA.highCards[i] - handB.highCards[i];
+    }
+  }
+
+  return 0;
+}
+
+async function playPoker(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const betInput = document.getElementById("pokerBet");
+  const resultEl = document.getElementById("pokerResult");
+  const playerCardsEl = document.getElementById("pokerPlayerCards");
+  const aiCardsEl = document.getElementById("pokerAiCards");
+
+  const bet = Number(betInput?.value || 0);
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+
+  const balance = profile.accounts[activeAccount] || 0;
+
+  if (!bet || bet <= 0) return showToast("Mise invalide", "error");
+  if (balance < bet) return showToast("Pas assez d'argent", "error");
+
+  profile.accounts[activeAccount] = balance - bet;
+
+  const deck = createDeck();
+  const playerHand = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+  const aiHand = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+
+  if (playerCardsEl) playerCardsEl.innerHTML = playerHand.map(c => cardToHtml(c)).join("");
+  if (aiCardsEl) aiCardsEl.innerHTML = aiHand.map(c => cardToHtml(c, true)).join("");
+  if (resultEl) resultEl.innerText = "L'IA révèle sa main...";
+
+  await new Promise(resolve => setTimeout(resolve, 1200));
+
+  if (aiCardsEl) aiCardsEl.innerHTML = aiHand.map(c => cardToHtml(c)).join("");
+
+  const playerEval = evaluatePokerHand(playerHand);
+  const aiEval = evaluatePokerHand(aiHand);
+  const comparison = comparePokerHands(playerHand, aiHand);
+
+  let message = "";
+  let toastType = "info";
+
+  if (comparison > 0) {
+    const amount = bet * 2;
+    profile.accounts[activeAccount] += amount;
+    message = `Poker gagné avec ${playerEval.label} contre ${aiEval.label} : +${formatMoney(bet)}`;
+    toastType = "success";
+  } else if (comparison === 0) {
+    profile.accounts[activeAccount] += bet;
+    message = `Égalité poker : ${playerEval.label}`;
+    toastType = "info";
+  } else {
+    message = `Poker perdu : ${playerEval.label} contre ${aiEval.label} -${formatMoney(bet)}`;
+    toastType = "warning";
+  }
+
+  profile.history.unshift(message);
+  profile.casinoGamesPlayed = (profile.casinoGamesPlayed || 0) + 1;
+
+  addXp(profile, 25, "Poker IA");
+
+  const newBadges = checkBadges(profile);
+  newBadges.forEach(b => {
+    showBadgePopup(b);
+    showToast(`Badge débloqué : ${b.name}`, "success");
+  });
+
+  if (resultEl) resultEl.innerText = message;
+  showToast(`♠️ ${message}`, toastType);
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    xp: profile.xp,
+    badges: profile.badges,
+    casinoGamesPlayed: profile.casinoGamesPlayed
+  });
+
+  await renderCrypto(uid);
+}
+
+
+const POKER_PROBABILITIES = [
+  { label: "Quinte flush", reward: "Main très forte", chance: "Très rare" },
+  { label: "Carré", reward: "Main très forte", chance: "Rare" },
+  { label: "Full", reward: "Main forte", chance: "Rare" },
+  { label: "Couleur", reward: "Main forte", chance: "Moyen" },
+  { label: "Suite", reward: "Main forte", chance: "Moyen" },
+  { label: "Brelan", reward: "Main correcte", chance: "Moyen" },
+  { label: "Double paire", reward: "Main correcte", chance: "Commun" },
+  { label: "Paire", reward: "Main faible", chance: "Commun" },
+  { label: "Carte haute", reward: "Main faible", chance: "Très commun" }
+];
+
+/* ========================== Profile Publique ========================= */
+
+async function renderPublicProfile() {
+  const params = new URLSearchParams(window.location.search);
+  const targetUid = params.get("uid");
+
+  if (!targetUid) {
+    window.location.href = "leaderboard.html";
+    return;
+  }
+
+  const profile = await getUserProfile(targetUid);
+  if (!profile) return;
+
+  const avatar = document.getElementById("publicProfileAvatar");
+  const name = document.getElementById("publicProfileName");
+  const title = document.getElementById("publicProfileTitle");
+  const stats = document.getElementById("publicProfileStats");
+  const badgesGrid = document.getElementById("publicBadgesGrid");
+
+  const selectedBadge = getBadgeById(profile.selectedProfileBadge);
+  const levelData = getLevelFromXp(profile.xp || 0);
+
+  if (avatar) avatar.innerText = selectedBadge ? selectedBadge.icon : "👤";
+  if (name) name.innerText = profile.displayName || profile.username || "Joueur";
+  if (title) title.innerText = profile.activeTitle || "Aucun titre";
+  if (stats) {
+    stats.innerText = `Niveau ${levelData.level} • Prestige ${profile.prestige?.level || 0} • Richesse ${formatMoney(getUserNetWorth(profile))}`;
+  }
+
+  if (badgesGrid) {
+    badgesGrid.innerHTML = (profile.badges || [])
+      .map(id => renderBadgeCard(getBadgeById(id), true))
+      .join("");
+  }
+}
+
+async function initPublicProfile() {
+  await renderPublicProfile();
+}
+
+const TITLES = [
+  {
+    id: "new_player",
+    name: "Nouveau banquier",
+    condition: p => true
+  },
+  {
+    id: "millionaire",
+    name: "Millionnaire",
+    condition: p => getUserNetWorth(p) >= 1_000_000
+  },
+  {
+    id: "casino_player",
+    name: "Flambeur",
+    condition: p => (p.casinoGamesPlayed || 0) >= 10
+  },
+  {
+    id: "trader",
+    name: "Trader",
+    condition: p => (p.badges || []).includes("crypto_master")
+  },
+  {
+    id: "prestige_master",
+    name: "Prestigieux",
+    condition: p => (p.prestige?.level || 0) >= 1
+  },
+  {
+    id: "empire_owner",
+    name: "PDG d’empire",
+    condition: p => (p.badges || []).includes("ultra_investor")
+  }
+];
+
+function getUnlockedTitles(profile) {
+  return TITLES.filter(t => t.condition(profile));
+}
+
+async function applyTaxes(uid) {
+  const profile = await getUserProfile(uid);
+  if (!profile) return;
+
+  const now = Date.now();
+  const lastTax = profile.lastTaxPayment || 0;
+
+  if (now - lastTax < TAX_INTERVAL_MS) return;
+
+  const activeAccount = profile.activeAccount || "Principal";
+
+  profile.accounts = profile.accounts || { Principal: 0 };
+  profile.history = profile.history || [];
+
+  const passiveIncome = getTotalPassiveIncome(profile);
+  const realEstateIncome = getTotalRealEstateIncome(profile);
+  const netWorth = getUserNetWorth(profile);
+
+  const incomeTax = (passiveIncome + realEstateIncome) * 60 * 5 * 0.08;
+  const wealthTax = netWorth * 0.00005;
+
+  const taxAmount = Math.max(100, Math.round(incomeTax + wealthTax));
+  const balance = profile.accounts[activeAccount] || 0;
+
+  const paid = Math.min(balance, taxAmount);
+
+  profile.accounts[activeAccount] = balance - paid;
+  profile.lastTaxPayment = now;
+
+  if (paid >= taxAmount) {
+    profile.history.unshift(`Impôts prélevés -${formatMoney(taxAmount)}`);
+    showToast(`🏛️ Impôts prélevés : ${formatMoney(taxAmount)}`, "warning");
+  } else {
+    profile.history.unshift(`Impôts partiels -${formatMoney(paid)} / ${formatMoney(taxAmount)}`);
+    showToast(`🏛️ Impôts partiels : ${formatMoney(paid)}`, "warning");
+  }
+
+  await updateUserProfile(uid, {
+    accounts: profile.accounts,
+    history: profile.history,
+    lastTaxPayment: profile.lastTaxPayment
+  });
+}
+
+/* ================= EVENT ============== */
+
+const LAUNCH_EVENT = {
+  active: true,
+  name: "🚀 Event de lancement",
+  shopDiscount: 20,
+  moneyMultiplier: 5
+};
+
+function getGlobalMoneyMultiplier() {
+  return LAUNCH_EVENT.active ? LAUNCH_EVENT.moneyMultiplier : 1;
+}
+
+function getShopEventDiscount() {
+  return LAUNCH_EVENT.active ? LAUNCH_EVENT.shopDiscount : 0;
 }
 
 /* ================= BOOT ================= */
@@ -4989,5 +6728,6 @@ watchAuth(async (user) => {
   if (page === "leaderboard") await initLeaderboard(user);
   if (page === "missions") await initMissions(user);
   if (page === "profile") await initProfile(user);
+  if (page === "publicProfile") await initPublicProfile();
   if (page === "admin") await initAdmin(user);
 });
